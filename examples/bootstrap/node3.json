@@ -1,0 +1,17 @@
+{
+  "node_id": "validator-3",
+  "listen_addr": "127.0.0.1:7003",
+  "public_url": "http://127.0.0.1:7003",
+  "data_dir": "examples/bootstrap/data/node3",
+  "genesis_file": "examples/bootstrap/genesis.json",
+  "validator_key_file": "examples/bootstrap/keys/validator3.json",
+  "peers": [
+    "http://127.0.0.1:7001",
+    "http://127.0.0.1:7002"
+  ],
+  "auto_propose": {
+    "enabled": true,
+    "interval_ms": 4000,
+    "max_txs": 256
+  }
+}

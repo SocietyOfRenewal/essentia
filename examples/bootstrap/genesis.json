@@ -1,0 +1,86 @@
+{
+  "chain_id": "essentia-alpha",
+  "bootstrap_admin": "did:essentia:6e9cd2266606af2eec200ba806b72c595e5761440138fd15c26fa253aa20eba8",
+  "initial_validators": [
+    {
+      "did": "did:essentia:6e9cd2266606af2eec200ba806b72c595e5761440138fd15c26fa253aa20eba8",
+      "public_key": "6e9cd2266606af2eec200ba806b72c595e5761440138fd15c26fa253aa20eba8",
+      "moniker": "validator-1"
+    },
+    {
+      "did": "did:essentia:93665a45bfc1b9989d7a3e9a4606d82df13f022749ac669cb96f0438cd9c3833",
+      "public_key": "93665a45bfc1b9989d7a3e9a4606d82df13f022749ac669cb96f0438cd9c3833",
+      "moniker": "validator-2"
+    },
+    {
+      "did": "did:essentia:5e6ab8470adfc892fcb9464389e1f298bbb69a4e41475c097a1e213243003fd7",
+      "public_key": "5e6ab8470adfc892fcb9464389e1f298bbb69a4e41475c097a1e213243003fd7",
+      "moniker": "validator-3"
+    }
+  ],
+  "initial_roles": [
+    {
+      "did": "did:essentia:6e9cd2266606af2eec200ba806b72c595e5761440138fd15c26fa253aa20eba8",
+      "roles": [
+        "validator",
+        "steward",
+        "treasury_operator"
+      ]
+    },
+    {
+      "did": "did:essentia:93665a45bfc1b9989d7a3e9a4606d82df13f022749ac669cb96f0438cd9c3833",
+      "roles": [
+        "validator"
+      ]
+    },
+    {
+      "did": "did:essentia:5e6ab8470adfc892fcb9464389e1f298bbb69a4e41475c097a1e213243003fd7",
+      "roles": [
+        "validator"
+      ]
+    }
+  ],
+  "initial_balances": [
+    {
+      "did": "did:essentia:6e9cd2266606af2eec200ba806b72c595e5761440138fd15c26fa253aa20eba8",
+      "essent": 1000000,
+      "essential_units": []
+    },
+    {
+      "did": "did:essentia:93665a45bfc1b9989d7a3e9a4606d82df13f022749ac669cb96f0438cd9c3833",
+      "essent": 250000,
+      "essential_units": []
+    },
+    {
+      "did": "did:essentia:5e6ab8470adfc892fcb9464389e1f298bbb69a4e41475c097a1e213243003fd7",
+      "essent": 250000,
+      "essential_units": []
+    }
+  ],
+  "initial_personhood": [
+    {
+      "did": "did:essentia:6e9cd2266606af2eec200ba806b72c595e5761440138fd15c26fa253aa20eba8",
+      "eligible": true,
+      "nullifier_commitment": "22deacbe94f1d147b6104e29c3d1b01c"
+    },
+    {
+      "did": "did:essentia:93665a45bfc1b9989d7a3e9a4606d82df13f022749ac669cb96f0438cd9c3833",
+      "eligible": true,
+      "nullifier_commitment": "b31f3314cf5823f4bafb98fa9de8c58f"
+    },
+    {
+      "did": "did:essentia:5e6ab8470adfc892fcb9464389e1f298bbb69a4e41475c097a1e213243003fd7",
+      "eligible": true,
+      "nullifier_commitment": "e1fcf1be0599673ebc24cc6cd45d3051"
+    }
+  ],
+  "initial_epoch_budget": {
+    "epoch": 1,
+    "global_essent_mint_cap": 1000000,
+    "freedom_floor_units_pool": 500000,
+    "vendor_redemption_pool_e": 200000,
+    "civic_gas_pool_e": 50000,
+    "created_by": "did:essentia:6e9cd2266606af2eec200ba806b72c595e5761440138fd15c26fa253aa20eba8",
+    "created_at": 0
+  }
+}

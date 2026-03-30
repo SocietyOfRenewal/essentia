@@ -1,0 +1,10 @@
+{
+  "validator1": "did:essentia:6e9cd2266606af2eec200ba806b72c595e5761440138fd15c26fa253aa20eba8",
+  "validator2": "did:essentia:93665a45bfc1b9989d7a3e9a4606d82df13f022749ac669cb96f0438cd9c3833",
+  "validator3": "did:essentia:5e6ab8470adfc892fcb9464389e1f298bbb69a4e41475c097a1e213243003fd7",
+  "alice": "did:essentia:47b8d1e1a7fba6a704a084fda774a3e1d5247d4ce252e0c860307ee9ec29dbd4",
+  "attestor1": "did:essentia:70033d757583938297c0e03c7406374bf5bb705ad839b215c2947c00bb263faf",
+  "attestor2": "did:essentia:bbd3918a7a5e44a404034f81d7247cc78685e7e695de2ec2ecdd90e9e10376ed",
+  "attestor3": "did:essentia:e16c6ded267a5d39d872c6ee6603dd528bfdf5302d737e4e03effe9a6d22e91f",
+  "vendor": "did:essentia:025c6ae2773d8da687fa43c7ab00918fed8f64ae8e19dd3f12342416bc109ee5"
+}

@@ -1,0 +1,6 @@
+{
+  "algorithm": "ed25519-prototype",
+  "did": "did:essentia:025c6ae2773d8da687fa43c7ab00918fed8f64ae8e19dd3f12342416bc109ee5",
+  "public_key": "025c6ae2773d8da687fa43c7ab00918fed8f64ae8e19dd3f12342416bc109ee5",
+  "secret_key": "38e7689717c4cfa790e4c4aae0caa516301f63070bcbb0d8bef2768b6e3fe46b"
+}
