@@ -31,6 +31,11 @@ Essentia is intentionally narrow. It is not a casino chain, a yield farm, or an 
 
 Essentia is an implementation vehicle for the Society of Renewal, not an independent ideology.
 
+The public [Society of Renewal Manifesto](https://www.societyofrenewal.org/manifesto)
+states the broader social diagnosis and call to coordination. This whitepaper is
+the narrower technical proposal and does not imply that the described network,
+currency, ballots, or benefits are live.
+
 The protocol MUST preserve these constitutional properties:
 
 - dignity is a hard constraint on all protocol and policy design,

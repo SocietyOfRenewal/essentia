@@ -1,14 +1,21 @@
 # Essentia Network
 
-This repo hosts the evolving specs and reference materials for the Essentia civic ledger (aligned with the [Society of Renewal](https://www.societyofrenewal.org/)) and will become a full client/server application written in Rust.
+This repository contains the evolving Essentia specification and a runnable
+v0.1.0 Rust client/server prototype aligned with the
+[Society of Renewal](https://www.societyofrenewal.org/).
 
-- Whitepaper: [`docs/whitepaper.md`](docs/whitepaper.md)
+- Society of Renewal [Manifesto](https://www.societyofrenewal.org/manifesto)
+- Proposed Whitepaper v0.7.0: [`docs/whitepaper.md`](docs/whitepaper.md)
+
+The distinction is important: the whitepaper describes the proposed target,
+while the code implements a deliberately smaller prototype. There is no public
+mainnet, issued currency, production ballot system, or live Freedom Floor.
 
 ## License
 
 Documentation © @CloneOfNone and contributors. See `LICENSE-DOCS`.
 
-# Essentia v0.1.0 prototype
+## Essentia v0.1.0 prototype
 
 Rust workspace for a minimal client/server blockchain prototype aligned to the revised Essentia design.
 

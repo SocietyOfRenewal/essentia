@@ -5,11 +5,11 @@ use anyhow::Result;
 use crate::crypto::{hash_json, sign_block, verify_block_signature, verify_signed_transaction};
 use crate::error::ChainError;
 use crate::models::{
-    AccountView, Amount, BasisPoints, Block, BlockHeight, Chain, Challenge, Claim, ClaimStatus,
-    DidRecord, Epoch, EpochAccounting, EpochBudget, EssentialUnitLot, GenesisConfig, KeyFile,
-    LedgerState, LockReason, LockedBalance, NodeStatus, PersonhoodCredential, Proposal, ProposalKind,
-    ProposalResult, ProposalStatus, Quest, Review, ReviewScore, RiskBand, Role, SignedTransaction,
-    StateDump, TransactionKind, UnsignedBlock, VendorSettlement,
+    AccountView, Amount, Block, BlockHeight, Chain, Challenge, Claim, ClaimStatus, DidRecord,
+    EpochAccounting, EpochBudget, EssentialUnitLot, GenesisConfig, KeyFile, LedgerState,
+    LockReason, LockedBalance, NodeStatus, PersonhoodCredential, Proposal, ProposalResult,
+    ProposalStatus, Quest, Review, ReviewScore, RiskBand, Role, SignedTransaction, StateDump,
+    TransactionKind, UnsignedBlock, VendorSettlement,
 };
 
 impl LedgerState {
