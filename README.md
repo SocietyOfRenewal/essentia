@@ -1,79 +1,111 @@
-# Essentia Network
+# Essentia
 
-This repository contains two different things:
+Essentia is the monetary and civic research system derived from the Society of Renewal Founding Book.
 
-1. a runnable v0.1.0 Rust research prototype; and
-2. the [Essentia Research Architecture v0.8.0](docs/whitepaper.md), derived from Part B of the [Society of Renewal Founding Book](https://github.com/SocietyOfRenewal/societyofrenewal/blob/main/docs/founding-book/Part%20B.md).
+This repository contains:
 
-The distinction is structural. The prototype demonstrates transaction and replication ideas. The whitepaper defines the research direction. The prototype must not be treated as an implementation of a live currency, government, Freedom Floor, identity system, or production ledger.
+1. the [Essentia v0.9.0 Monetary and Civic Research Architecture](docs/whitepaper.md);
+2. an [executable monetary research scaffold](research/monetary_dynamics.py);
+3. a runnable v0.1.0 Rust ledger prototype.
 
-There is no public mainnet, issued Essent, issued Essential Unit, production ballot system, or live Society benefit.
+The whitepaper defines the direction. The research code tests monetary mechanisms. The Rust workspace is a narrow prototype and does not implement the current economic architecture.
 
-## Economic model
+There is no public mainnet, issued Essent, issued Essential Unit, live Freedom Floor, production ballot system, or public benefit.
 
-The current research architecture is derived from Part B of the Founding Book. A quoted conversion rate can calculate a large quantity of `ℰ` when `ℰ` loses value, but it cannot guarantee that the resulting balance will buy the promised essentials. The design therefore separates:
+## Monetary hypothesis
 
-- **𝒰:** a person-held entitlement measured against a regional essential basket;
-- **ℰ:** a transferable mutual-credit and settlement instrument;
-- **ℛ:** the receivable a provider earns after delivering an 𝒰-funded good or service;
-- **External Liquidity Bridge:** reserves, revenues, credit lines, contracts, and payment partners that connect internal claims to the outside economy;
-- **Public Evidence Plane:** signed, independently verifiable records of rules, liabilities, coverage, budgets, and institutional actions.
+Essentia tests whether a cryptographic network can deliberately create a positive-value currency and use it to provide a real Universal Basic Income.
 
-𝒰 value is attached to delivered essentials and funded settlement capacity. Conversion into ℰ is a later, bounded service. It is not the source of the entitlement's value.
+The core flow is:
 
-The first production experiment should be double-entry accounting plus an append-only transparency log, not a new blockchain mainnet.
+```text
+𝒰 -> ℛ -> ℰ
+```
 
-## License
+- `𝒰`, Essential Unit: the indexed real entitlement and unit of account.
+- `ℛ`, Essential Settlement Receivable: the short-lived bridge claim created when `𝒰` is activated.
+- `ℰ`, Essent: the transferable money used for general exchange.
 
-Documentation © @CloneOfNone and contributors. See `LICENSE-DOCS`.
+A person may activate `𝒰` for a provider payment or unrestricted conversion. `ℛ` preserves the real value while the transaction settles. Settlement creates or transfers enough `ℰ` to represent the same internal purchasing power at that time.
+
+`ℰ` may include:
+
+- outside civic money created through equal per-person issuance;
+- inside money created through mutual and producer credit;
+- treasury and market operations under public rules.
+
+A conventional redemption liability is not required behind each unit of `ℰ`. Value is expected to emerge from coordinated acceptance, useful goods and services, network effects, predictable rules, equal issuance, and confidence that other people will continue to accept it.
+
+The External Liquidity Bridge supports imports, legacy obligations, and optional outside exchange. It is not the sole source of value and does not need to back all `ℰ` one-for-one.
+
+## Research first
+
+The first executable model is documented in [docs/MONETARY_RESEARCH.md](docs/MONETARY_RESEARCH.md).
+
+Run its self-tests:
+
+```bash
+python3 research/monetary_dynamics.py --self-test
+```
+
+Generate scenario results:
+
+```bash
+python3 research/monetary_dynamics.py \
+  --self-test \
+  --json \
+  --output-dir ./research/output
+```
+
+The model demonstrates two narrow points:
+
+- starting at `1 ℰ/𝒰` or `1,000,000 ℰ/𝒰` produces the same normalized path when real claims and capacity are identical;
+- physical shortage, supply response, producer credit, adoption friction, and confidence can change the path.
+
+It is an illustrative scaffold, not a forecast.
+
+## Repository layout
+
+- `docs/whitepaper.md`: v0.9.0 monetary and civic architecture.
+- `docs/MONETARY_RESEARCH.md`: hypotheses, scenarios, limitations, and next models.
+- `research/monetary_dynamics.py`: dependency-free monetary and adoption simulations.
+- `docs/ARCHITECTURE.md`: what the v0.1.0 prototype implements and what should be built next.
+- `crates/essentia-core`: prototype types, signing, and state machine.
+- `crates/essentia-node`: prototype HTTP node.
+- `crates/essentia-cli`: prototype CLI.
+- `examples/bootstrap`: sample genesis, validators, and keys.
+- `scripts/demo.sh`: end-to-end prototype flow.
 
 ## Essentia v0.1.0 prototype
 
-The current Rust workspace implements a deliberately narrow civic-ledger experiment:
+The Rust workspace implements:
 
 - signed DID-style account registration;
-- a multi-node HTTP server with peer synchronization;
+- multi-node HTTP replication;
 - rotating-proposer signed blocks;
 - deterministic state transitions;
-- two prototype assets:
-  - `ESSENT` (`ℰ`), transferable;
-  - `ESSENTIAL_UNITS` (`𝒰`), non-transferable except member-to-vendor spend and vendor redemption;
-- epoch budgets;
-- purpose and quest funding;
-- proof-of-contribution claims;
-- reviewer scoring with median aggregation;
-- budget-capped mint finalization;
-- public-signal governance proposals and votes;
-- JSON persistence and bootstrap configuration.
+- prototype `ℰ` and `𝒰` balances;
+- epoch budgets, purposes, quests, claims, and review;
+- public-signal proposals and votes;
+- JSON persistence.
 
-These mechanics are research artifacts, not the target economic architecture. Prototype `𝒰` redemption, generic `ℰ` minting, one-DID assumptions, and public-signal voting do not satisfy the requirements for a real pilot.
+These mechanics are research artifacts. They do not implement:
 
-## Workspace layout
+- the indexed `𝒰` unit;
+- `ℛ`;
+- outside civic issuance;
+- mutual or producer credit;
+- internal `ℰ/𝒰` price discovery;
+- standing provider offers;
+- supply-coupled monetary control;
+- external exchange or the Liquidity Bridge;
+- strong proof of personhood;
+- private binding elections;
+- production consensus.
 
-- `crates/essentia-core`: protocol types, signing, state machine, and prototype minting logic.
-- `crates/essentia-node`: HTTP node daemon.
-- `crates/essentia-cli`: key generation, queries, and transaction submission.
-- `examples/bootstrap`: sample genesis, validator configurations, and key files.
-- `scripts/demo.sh`: end-to-end prototype flow.
-- `docs/ARCHITECTURE.md`: current prototype design and limitations.
-- `docs/whitepaper.md`: v0.8.0 research architecture and stage-gate program.
+## Quick start for the prototype
 
-## Prototype limits
-
-- Consensus is rotating proposer plus signed block replication, not Byzantine fault tolerant consensus.
-- Cryptography uses Ed25519.
-- Governance ballots are public signals only.
-- Persistence is JSON snapshots.
-- The personhood credential is an administrator-issued prototype object, not proof of unique personhood.
-- 𝒰 redemption uses a pre-funded prototype pool and does not implement real basket measurement, provider receivables, reserve accounting, executable-price estimation, or the settlement waterfall.
-- The code does not implement mutual-credit ℰ, double-entry node exposure, external settlement, or loss resolution.
-- No general contract virtual machine exists.
-
-## Quick start
-
-### 1. Start three nodes
-
-In three shells from the repository root:
+Start three nodes in separate shells:
 
 ```bash
 cargo run -p essentia-node -- --config examples/bootstrap/node1.json
@@ -81,68 +113,32 @@ cargo run -p essentia-node -- --config examples/bootstrap/node2.json
 cargo run -p essentia-node -- --config examples/bootstrap/node3.json
 ```
 
-### 2. Inspect bootstrap IDs
-
-```bash
-cat examples/bootstrap/ids.json
-```
-
-### 3. Check the network
+Inspect state:
 
 ```bash
 cargo run -p essentia-cli -- query status --node http://127.0.0.1:7001
 cargo run -p essentia-cli -- query state --node http://127.0.0.1:7001
 ```
 
-### 4. Run the demo
+Run the demo:
 
 ```bash
 bash scripts/demo.sh
 ```
 
-The demo:
-
-1. registers Alice, three reviewers, and a vendor;
-2. issues prototype personhood and role credentials;
-3. seeds Alice with ℰ;
-4. creates a purpose and quest;
-5. submits a claim and reviews;
-6. finalizes a budget-capped payout;
-7. issues 𝒰, spends it to a vendor, and redeems against a prototype pool.
-
-That is a software demonstration, not an economic validation.
-
-## Current payout experiment
-
-The prototype uses:
-
-```text
-payout = min(
-    quest_reward_ceiling * score,
-    remaining_purpose_budget,
-    remaining_epoch_mint_cap
-)
-```
-
-Reviewer identity and reviewer status do not directly increase the payout.
-
-Version 0.8.0 goes further: a real payout must reference a funded budget, authorized credit position, and settlement capacity. Review can establish whether work met a contract. Review cannot create purchasing power by scoring the work more highly.
-
 ## Next implementation work
 
-Do not begin with a consensus rewrite.
+1. Implement a double-entry core that distinguishes `𝒰`, `ℛ`, outside civic `ℰ`, mutual credit, producer credit, and treasury operations.
+2. Build the basket and internal price-index engine.
+3. Implement the `𝒰 -> ℛ -> ℰ` activation and settlement state machine.
+4. Add standing provider offers and a founding-market graph.
+5. Expand the simulation into stock-flow-consistent and agent-based models.
+6. Implement aggregate `ℛ` aging, monetary, supply, and adoption metrics.
+7. Add purpose-bound personhood credentials and recovery.
+8. Add signed public event logs and independent verifiers.
+9. Test external exchange and bridge operations after internal use works.
+10. Add BFT consensus only when independent nodes need shared finality.
 
-The research sequence is:
+## License
 
-1. specify double-entry accounts for ℰ, 𝒰 liabilities, ℛ claims, reserves, guarantees, and node exposure;
-2. build economic simulations and failure injection;
-3. implement a signed append-only transparency log with independent witnesses;
-4. run a shadow ledger beside conventional settlement;
-5. pilot closed business mutual credit without 𝒰;
-6. pilot externally funded 𝒰 direct spending;
-7. add voluntary mixed ℰ settlement and obligation netting;
-8. test bounded conversion only after executable liquidity exists;
-9. federate independent clearing nodes only after resolution and exposure rules work;
-10. evaluate whether Byzantine fault tolerant consensus is actually necessary.
-
-See [the whitepaper](docs/whitepaper.md) for acceptance gates, stop conditions, coverage equations, identity boundaries, and the replacement economic model.
+Documentation © @CloneOfNone and contributors. See `LICENSE-DOCS`.

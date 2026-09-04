@@ -1,23 +1,38 @@
-# Architecture
+# Essentia v0.1.0 Prototype Architecture
 
 ## Status
 
-This document describes the runnable Essentia v0.1.0 prototype.
+This document describes the runnable Rust prototype.
 
-It does not describe the current target architecture. The target is the [v0.8.0 Research Architecture](whitepaper.md), which is derived from Part B of the Society of Renewal Founding Book. The prototype should be preserved as a test fixture and source of implementation lessons, not incrementally mistaken for the production design.
+The current research target is the [v0.9.0 Monetary and Civic Research Architecture](whitepaper.md), derived from Part B of the Society of Renewal Founding Book. The prototype is useful code, but it does not define the monetary system.
 
-In particular, v0.1.0 implements direct Essential Unit settlement into Essent from an epoch pool. The governing v0.8.0 architecture instead requires Essential Settlement Receivables, coverage accounting, a provider settlement waterfall, mutual credit, reserves, procurement, and bounded conversion. The v0.1.0 implementation is a test harness, not a real Freedom Floor or economically sufficient UBI mechanism.
+In particular, v0.1.0 has prototype `𝒰` and `ℰ` balance paths. The target architecture requires:
+
+```text
+𝒰 -> ℛ -> ℰ
+```
+
+- `𝒰` as an indexed real entitlement;
+- `ℛ` as the bridge claim created on activation;
+- `ℰ` as outside civic money and inside credit money;
+- internal purchasing-power measurement;
+- a founding market;
+- supply-coupled issuance;
+- external exchange separated from internal value.
 
 ## 1. Scope
 
-Essentia v0.1.0 is runnable research software for a narrow civic-ledger test harness:
+The prototype provides a test harness for:
 
-- nodes talk over HTTP;
-- blocks are signed and replicated;
-- the state machine enforces prototype mint boundaries;
-- the client can create keys, inspect state, and submit transactions.
+- signed transactions;
+- account registration;
+- replicated nodes;
+- deterministic state transitions;
+- budget and claim workflows;
+- two balance types;
+- simple public-signal governance.
 
-It is deliberately narrow and not production infrastructure.
+It does not provide production consensus, privacy, personhood, monetary stability, a UBI, or a lawful payment network.
 
 ## 2. Node model
 
@@ -27,8 +42,8 @@ Each node runs:
 - a local mempool;
 - a full chain snapshot;
 - deterministic block execution;
-- background peer sync;
-- optional auto-propose.
+- background peer synchronization;
+- optional automatic proposal.
 
 The proposer for height `h` is:
 
@@ -36,16 +51,14 @@ The proposer for height `h` is:
 validator_set[(h - 1) % validator_set.len()]
 ```
 
-This gives a deterministic schedule without real Byzantine-fault-tolerant consensus.
+This is deterministic rotation, not Byzantine fault tolerant consensus.
 
-## 3. State model
+## 3. Prototype state
 
-The prototype chain is account/object based.
+### Registries
 
-### Core registries
-
-- DID registry
-- personhood credentials
+- DID-style accounts
+- administrator-issued personhood objects
 - role grants
 - epoch budgets
 - purposes
@@ -53,159 +66,131 @@ The prototype chain is account/object based.
 - claims
 - proposals
 
-### Value stores
+### Balances
 
-- liquid `ℰ` balances
-- locked `ℰ` balances
+- liquid `ℰ`
+- locked `ℰ`
 - expiring `𝒰` lots
 - vendor settlement queues
 
-These names correspond to prototype objects. They do not establish that the underlying economic claims are viable.
+The names do not imply that the prototype satisfies the v0.9.0 semantics.
 
-## 4. Mint safety inside the prototype
+## 4. Claim payout experiment
 
-The prototype enforces one useful accounting constraint: reviewer reputation or influence does not scale issuance.
-
-A claim payout is bounded by three ceilings:
+A prototype claim payout is:
 
 ```text
 raw = quest_reward_ceiling * rubric_weighted_median_score
 payout = min(raw, remaining_purpose_budget, remaining_epoch_mint_cap)
 ```
 
-Reviewer identity affects whether a review is accepted. It does not affect the payout multiplier.
+Reviewer identity does not directly multiply payout.
 
-This protects an internal budget rule. It does not demonstrate that minted ℰ has stable purchasing power or that a contribution payout is economically funded.
+This is useful for testing workflow and authorization. It does not establish the purchasing power of the issued `ℰ`. Production work should distinguish contract approval from monetary issuance and settlement.
 
-## 5. Claim lifecycle
+## 5. Prototype `𝒰` path
 
-1. A quest exists under a funded prototype purpose.
-2. A claimant posts a claim with a bond.
-3. Attestors submit rubric scores.
-4. Members may challenge with a bond.
-5. A steward or validator resolves challenges.
-6. Finalization checks:
-   - challenge window elapsed;
-   - minimum review count reached;
-   - no unresolved challenge;
-   - epoch cap remaining;
-   - purpose budget remaining.
-7. Finalization mints liquid ℰ plus an audit-tail lock.
-8. The claim bond unlocks only after the audit-tail horizon.
+The prototype:
 
-The lifecycle remains useful for testing workflow and fraud surfaces. v0.8.0 does not assume that arbitrary outcome scores should authorize monetary issuance. Future experiments must distinguish accounting approval from funded settlement.
+1. creates an expiring `𝒰` balance;
+2. lets a member spend `𝒰` to an authorized vendor;
+3. lets the vendor redeem against a configured epoch pool.
 
-## 6. Prototype asset rules
+The v0.9.0 target instead requires an indexed unit, `ℛ`, direct and unrestricted conversion, internal price discovery, outside civic issuance, provider settlement choices, and visible failure states.
 
-### ℰ
+## 6. Governance
 
-- transferable;
-- used for prototype operational balances and claim payouts;
-- used for claim and challenge bonds;
-- subject to audit-tail locking.
-
-### 𝒰
-
-- issued as an expiring prototype balance;
-- not generally transferable;
-- can be spent from a member to an authorized vendor;
-- vendor redemption converts pending 𝒰 settlement into ℰ from a separate epoch pool.
-
-The final rule above is only a prototype transaction path. It is not a real-value guarantee. Minting more `ℰ` cannot guarantee a provider's purchasing power when demand for `ℰ` or external liquidity is absent.
-
-## 7. Governance in v0.1.0
-
-Only public-signal proposals are implemented:
+The prototype supports:
 
 - proposal creation;
-- yes/no ballots;
-- highest-sequence ballot wins;
+- public yes/no signals;
+- highest-sequence ballot replacement;
 - tally after close.
 
-These are test signals, not binding elections. Encrypted private ballots, eligibility assurance, coercion resistance, decision-class selection, appeals, and independent verification are not implemented.
+These are not binding private elections. Eligibility assurance, secret ballots, coercion resistance, method selection, appeals, and independent verification remain research and implementation work.
 
-## 8. Persistence
+## 7. Persistence
 
-Each node persists one JSON snapshot:
+Each node stores one JSON snapshot:
 
 ```text
 <data_dir>/snapshot.json
 ```
 
-The snapshot contains:
+The snapshot contains the chain, state, mempool, seen transactions, and known peers. This is acceptable for demonstrations and unacceptable for production recovery, auditing, or scale.
 
-- the full chain;
-- current state;
-- mempool;
-- seen transactions;
-- known peers.
+## 8. Cryptography
 
-This is acceptable for demonstrations. It is not the intended record, database, backup, recovery, or audit architecture.
+The prototype uses Ed25519 and JSON key files. The signing boundary can be replaced later.
 
-## 9. Key files
+A prototype DID string proves control of one key. It does not prove unique personhood, eligibility, membership, or recovery safety.
 
-The CLI writes JSON key files with:
+## 9. Current research model
 
-- algorithm;
-- DID;
-- public key;
-- secret key.
+The first monetary model is [`research/monetary_dynamics.py`](../research/monetary_dynamics.py), documented in [MONETARY_RESEARCH.md](MONETARY_RESEARCH.md).
 
-The prototype uses Ed25519. The signing boundary lives in `essentia-core/src/crypto.rs` so the backend can later be replaced.
+It tests:
 
-A DID string in the prototype is an account identifier. It is not proof of unique personhood, membership, eligibility, or secure recovery.
+- nominal-scale invariance;
+- activated real claims versus deliverable output;
+- capacity response;
+- producer credit;
+- provider coverage and adoption thresholds;
+- friction and confidence shocks.
 
-## 10. What should happen next
+The model is deliberately incomplete. It is the beginning of the required research stack, not an economic forecast.
 
-The next work is not to bolt production consensus and post-quantum signatures onto the current economic model.
+## 10. Implementation sequence
 
-The next work should be:
+1. Double-entry representations for `𝒰`, `ℛ`, civic `ℰ`, mutual credit, producer credit, treasury issue, and external assets.
+2. Basket, availability, and `Q_int` calculation.
+3. `𝒰 -> ℛ -> ℰ` activation and settlement.
+4. Standing offers and founding-market graph analysis.
+5. Monetary and adoption simulation with reproducible scenarios.
+6. Aggregate `ℛ` aging and settlement telemetry.
+7. Purpose-bound identity, uniqueness, and recovery.
+8. Signed append-only public evidence log with independent witnesses.
+9. External exchange, reserves, and bridge experiments.
+10. Federated shared state.
+11. BFT finality if the trust model requires it.
 
-1. implement the v0.8.0 deterministic economic simulator;
-2. represent 𝒰, ℰ, ℛ, external reserves, provider capacity, credit limits, defaults, and loss allocation explicitly;
-3. run shadow accounting with no real-value dependence;
-4. publish verifier outputs, coverage reports, and stress scenarios;
-5. test plural identity and recovery separately from monetary rights;
-6. implement signed transparency logs and witnesses for public records;
-7. compare centralized, federated, and BFT operation only after the trust model is concrete;
-8. preserve v0.1.0 compatibility only where it serves a documented experiment.
+## 11. Missing components
 
-## 11. Known missing pieces
+### Monetary and economic
 
-### Economic
+- indexed `𝒰` basket;
+- `ℛ` lifecycle;
+- equal outside civic issuance;
+- mutual and producer credit;
+- internal purchasing-power index;
+- neutral rebase;
+- standing offers;
+- supply response;
+- external markets and bridge;
+- seigniorage accounting;
+- defaults and loss allocation.
 
-- essential basket and versioning
-- Essential Settlement Receivables
-- capacity and liquidity coverage
-- provider settlement waterfall
-- mutual-credit issuance and repayment
-- issuer-specific credit risk
-- external reserves and procurement
-- executable market conversion
-- circuit breakers and emergency modes
-- default and dissolution accounting
+### Identity and governance
 
-### Institutional
+- privacy-preserving unique personhood;
+- purpose-bound credentials;
+- recovery and appeals;
+- private verifiable ballots;
+- bounded monetary authority;
+- model and decision records.
 
-- real provider contracts
-- legal and regulatory structure
-- independent economic audit
-- oracle governance
-- appeals and error correction
-- node admission and resolution
+### Distributed systems
 
-### Technical
-
-- signed Merkle transparency log
-- independent witnesses and split-view detection
-- durable event and state stores
-- reproducible verifier artifacts
-- privacy-preserving credentials and recovery
-- end-to-end verifiable voting for appropriate decision classes
-- cryptographic agility and migration
-- BFT consensus only if federation research justifies it
-- metrics, tracing, and operational dashboards
+- durable event storage;
+- Merkle transparency log;
+- independent witnesses;
+- reproducible verifiers;
+- privacy-preserving data separation;
+- federated clearing;
+- production consensus;
+- cryptographic migration;
+- operations and incident response.
 
 ---
 
-> Target architecture -> [Essentia v0.8.0 Research Architecture](whitepaper.md)
+> Research target -> [Essentia v0.9.0 Monetary and Civic Research Architecture](whitepaper.md)
