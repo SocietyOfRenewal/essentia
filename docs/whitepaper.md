@@ -1,811 +1,1454 @@
-# Essentia Network White Paper
+# Essentia Research Architecture
 
-## Version 0.7.0 - Revised Technical Draft
+## Version 0.8.0 - Derived from Part B
 
-Status: proposed replacement for v0.6.0  
-Date: 2026-03-29  
-Scope: civic ledger for the Society of Renewal, not a general-purpose speculative chain
-
----
-
-## 0. Executive Summary
-
-Essentia is the civic ledger and monetary core of the Society of Renewal. It exists to do five things well:
-
-1. give each member a self-sovereign civic identity without putting personal data on-chain,
-2. provide private ballots with public verification,
-3. budget and verify contribution to the commons,
-4. issue and settle two monetary instruments with different purposes, and
-5. make power auditable: proposals, budgets, minting, and outcomes must all be inspectable.
-
-This revision fixes the two core failures in v0.6.0:
-
-- The cryptography stack was internally inconsistent. The draft claimed a post-quantum ledger while naming Ed25519 and BBS+/BLS12-381 in the normative path. v0.7.0 moves to a hybrid/PQ-ready architecture: ledger-critical signatures and encryption use NIST PQC primitives from genesis, while privacy-preserving credential and ballot proof suites are versioned and explicitly swappable.
-- The minting function was gameable. In v0.6.0, the amount minted depended directly on complexity, impact, and the summed reputation of attestors. That lets colluding reviewers amplify issuance. v0.7.0 removes reviewer reputation from payout. Attestors certify validity only. Money is created only from pre-approved epoch budgets, after review, challenge, and audit.
-
-Essentia is intentionally narrow. It is not a casino chain, a yield farm, or an open smart contract playground. Mainnet v1 exposes audited native modules only: identity, governance, treasury, contribution claims, Essent balances, Essential Unit balances, vendor redemption, and archival proofs.
+Status: research specification, not a production protocol
+Date: 2026-09-03
+Scope: civic evidence, entitlement, clearing, and accountable coordination for the Society of Renewal
 
 ---
 
-## 1. Constitutional Alignment
+## 0. Status
 
-Essentia is an implementation vehicle for the Society of Renewal, not an independent ideology.
+Essentia does not yet exist as a public economic system.
 
-The public [Society of Renewal Manifesto](https://www.societyofrenewal.org/manifesto)
-states the broader social diagnosis and call to coordination. This whitepaper is
-the narrower technical proposal and does not imply that the described network,
-currency, ballots, or benefits are live.
+The repository contains a runnable v0.1.0 Rust prototype. That prototype demonstrates signed accounts, replicated nodes, budget objects, contribution claims, two asset types, and basic transaction flows. It does not demonstrate a viable currency, a Freedom Floor, proof of unique personhood, private binding elections, production consensus, or a lawful global payment network.
 
-The protocol MUST preserve these constitutional properties:
+This architecture is derived from [Part B of the Founding Book](https://github.com/SocietyOfRenewal/societyofrenewal/blob/main/docs/founding-book/Part%20B.md).
 
-- dignity is a hard constraint on all protocol and policy design,
-- one member, one voice is the baseline for governance,
-- delegation is optional, topic-scoped, and revocable,
-- ballots for binding governance are private and publicly verifiable,
-- UBI, called the Freedom Floor, is delivered through a dedicated essentials instrument,
-- privacy is an agency right, and
-- institutional power must be transparent in proportion to its power.
+Its monetary core separates three claims that must never be confused:
 
-Where a technical mechanism conflicts with those constraints, the mechanism loses.
+- `𝒰`, the Essential Unit, represents a person's indexed entitlement to essential purchasing power;
+- `ℛ`, the Essential Settlement Receivable, records what a provider is owed after delivering an essential good or service;
+- `ℰ`, Essent, is a transferable mutual-credit and settlement instrument.
 
----
+A conversion formula can calculate how many units of `ℰ` correspond to a target amount at a quoted price. It cannot guarantee that the resulting `ℰ` will buy the promised essentials. If `ℰ` loses most of its usable market value, issuing a larger quantity may increase sell pressure and accelerate the collapse. The guarantee therefore attaches to delivered essentials, provider capacity, and funded settlement rather than an unlimited token conversion.
 
-## 2. Design Goals and Non-Goals
+The central rule is:
 
-### 2.1 Goals
+> Software may enforce a claim. A society must make the claim true.
 
-1. Security first
-   - no unauthorized mint,
-   - no double-spend,
-   - no hidden policy changes,
-   - no private re-interpretation of governance outcomes.
-
-2. Civic legitimacy
-   - one person, one member identity,
-   - no rights gated by wealth, stake, or reputation,
-   - transparent public budgets,
-   - verifiable elections.
-
-3. Low attack surface
-   - no proof-of-work,
-   - no arbitrary user-deployed contracts in v1,
-   - small, auditable state machine.
-
-4. Monetary separation of concerns
-   - Essent (E) for general economic coordination,
-   - Essential Unit (U) for baseline access to essentials.
-
-5. Public legibility
-   - every binding decision, mint, budget, and redemption path has a verifier path.
-
-### 2.2 Non-Goals
-
-- Not a general-purpose L1 for speculative DeFi.
-- Not a privacy coin for unbounded anonymous transfer.
-- Not an algorithmic stablecoin.
-- Not a system where reputation or stake increases voting rights.
-- Not a protocol that claims full post-quantum privacy before such a stack is mature enough for production.
+No balance displayed in a wallet counts as a Freedom Floor until a person can exchange it for real food, shelter, healthcare, communication, transport, energy, safety, or flexible spending power at the promised level.
 
 ---
 
-## 3. Core Objects
+## 1. Purpose
 
-| Module | Object | Purpose |
-| --- | --- | --- |
-| Identity | DID | stable civic identifier controlled by the member |
-| Identity | Personhood Credential | uniqueness / membership eligibility without public PII |
-| Governance | Proposal | canonical text hash, parameters, snapshot height, election mode |
-| Governance | Delegation | topic-scoped, revocable voting delegation |
-| Governance | Ballot | encrypted vote payload or public signal payload |
-| Treasury | Budget | epoch budget for purposes, CGP, grants, audits, reserves |
-| Contribution | Purpose | public mission with metrics, budget, and scope |
-| Contribution | Quest | discrete funded work item or outcome contract |
-| Contribution | Claim | request for payout based on work delivered |
-| Contribution | Review | attestor assessment of a claim |
-| Value | Essent (E) | transferable fungible currency |
-| Value | Essential Unit (U) | non-transferable, expiring essentials instrument |
-| Value | Vendor Credential | permission to accept U and redeem for E |
+Essentia is a proposed protocol suite for six kinds of coordination:
 
-Only hashes, state commitments, ciphertexts, proofs, and minimal metadata live on-chain. Evidence bundles, large texts, and learning materials live off-chain under content addressing with on-chain commitments.
+1. publishing rules, evidence, budgets, and institutional actions in tamper-evident form;
+2. proving limited facts about identity and eligibility without exposing a whole life;
+3. recording democratic decisions without making one voting method universal;
+4. clearing reciprocal obligations and mutual credit;
+5. administering a real-need entitlement called Essential Units;
+6. measuring whether the Society is keeping its promises.
 
----
+Essentia is not one blockchain that must contain everything.
 
-## 4. Identity, Membership, and Recovery
+It may eventually include replicated Byzantine fault tolerant ledgers where multiple mutually distrustful operators need shared write authority. Early versions should use the simplest architecture that can produce independently verifiable records, correct errors, protect private data, and survive operator failure.
 
-### 4.1 DID Method
+Essentia is not:
 
-Essentia defines a native DID method:
+- a speculative general-purpose chain;
+- an algorithmic stablecoin;
+- a promise that token appreciation will finance universal income;
+- a proof-of-stake government;
+- a public reputation system;
+- a universal identity number;
+- an autonomous decision-maker;
+- a substitute for contracts, reserves, providers, institutions, law, or productive capacity.
 
-    did:essentia:<identifier>
-
-A DID document contains verification methods and service endpoints. The chain stores the authoritative state commitment for each DID document version.
-
-### 4.2 Separation of Authentication and Authorization
-
-v0.6.0 mixed passkeys and ledger authority too loosely. v0.7.0 separates them.
-
-1. Session authentication
-   - A member logs into clients and relayers using WebAuthn passkeys.
-   - This is UX and anti-phishing infrastructure, not the final monetary root of trust.
-
-2. Ledger authorization
-   - Every DID has a controller key for chain actions.
-   - Mainnet validity requires an ML-DSA-65 signature on governance, treasury, and monetary transactions.
-   - During migration, clients MAY attach a secondary classical signature for ecosystem compatibility, but consensus validity depends on the PQ ledger signature.
-
-3. Recovery
-   - Recovery is a separate authority path using a time-locked guardian quorum, recommended 3-of-5 or 4-of-7.
-   - Recovery cannot move funds instantly. It can only rotate keys after a public delay and alert period.
-   - Emergency freeze of a DID is limited to key compromise scenarios and must expire automatically unless ratified through review.
-
-### 4.3 Proof of Personhood and Membership
-
-A DID alone is not enough for voting or UBI. Binding civic actions require a Personhood Credential.
-
-Personhood eligibility is established through a privacy-preserving, reviewable process combining several signals:
-
-- device-bound keys,
-- community vouching,
-- optional third-party identity evidence when the member chooses to use it,
-- anomaly detection and challenge review,
-- appeals with human oversight.
-
-The chain stores only:
-
-- a blinded eligibility/nullifier commitment,
-- status flags,
-- issuance and revocation commitments,
-- audit trail references.
-
-No raw biometric, government-ID image, or home address is ever stored on-chain.
-
-### 4.4 Protected and Temporary Custody
-
-If a member is in crisis and cannot safely manage keys, a temporary custodial arrangement may exist under three hard rules:
-
-- it is time-bounded,
-- it is transparent to oversight,
-- it includes a mandatory path back to full member control.
-
-Permanent dependency is invalid.
+The protocol serves the Society. The protocol is replaceable.
 
 ---
 
-## 5. Ledger Model
+## 2. Constitutional invariants
 
-Essentia uses an account-based state machine with audited native modules only.
+The following properties constrain every implementation.
 
-### 5.1 Why Account-Based
+### 2.1 Dignity
 
-The chain tracks identity state, role credentials, proposal state, claim state, vendor credentials, and expiring U balances. These fit an account/object model better than a pure UTXO model.
+No protocol function may make access to food, shelter, safety, appeal, or personhood depend on public humiliation, wealth, reputation, political agreement, or technical competence.
 
-### 5.2 Native Modules in v1
+### 2.2 Reality before denomination
 
-- DID Registry
-- Credential Status and Revocation
-- Governance
-- Delegation
-- Treasury and Budgeting
-- Contribution Claims and Review
-- Essent Balances
-- Essential Unit Balances
-- Vendor Redemption
-- Archival Proof Anchors
+A monetary claim is measured by what it obtains, not by the number of units issued.
 
-General-purpose smart contracts are disabled in v1. Any future expansion requires separate constitutional approval and a new audit process.
+### 2.3 Privacy for people, transparency for power
 
-### 5.3 Deterministic Execution
+Institutional rules, budgets, issuance, settlement exposures, oracle inputs, and official actions must be inspectable. Personal data, ballots, recovery secrets, health information, household circumstances, and restorative records must be minimized and compartmentalized.
 
-Protocol state transitions MUST be deterministic. No floating-point arithmetic is allowed on-chain. All monetary calculations use fixed-point integer math.
+### 2.4 Explicit liabilities
 
----
+Every issued monetary or entitlement claim must identify the institution that owes performance, the resources available for settlement, and the loss process if performance fails.
 
-## 6. Consensus and Network Security
+### 2.5 No wealth-weighted civic rights
 
-### 6.1 Consensus
+ℰ balances, stake, contribution scores, vendor volume, validator bonds, and office may not increase baseline voting rights.
 
-Essentia uses a HotStuff-family Byzantine Fault Tolerant protocol with deterministic finality.
+### 2.6 Reversibility
 
-- Safety threshold: n >= 3f + 1 validators, tolerating up to f Byzantine validators.
-- Finality: a block is final once it carries a valid quorum certificate.
-- Mempool: a DAG-based dissemination layer MAY be added for throughput, but consensus-critical ordering remains the BFT finality protocol.
+Pilots must be bounded. Monetary parameters must have circuit breakers. Emergency powers must expire. Affected people must have appeal and remedy.
 
-This fixes the v0.6.0 confusion between Narwhal/Bullshark-style plumbing and HotStuff finality. In v0.7.0, the consensus rule is singular: HotStuff-family finality is normative.
+### 2.7 Verifier first
 
-### 6.2 Validator Set
-
-- Validators are public DIDs.
-- Initial launch is federated and transparently disclosed.
-- Validator admission, rotation, and removal are governed by public process.
-- Validators must publish infrastructure attestations, conflict disclosures, and operational contacts.
-
-### 6.3 Bonds and Slashing
-
-Validators post operational bonds in E.
-
-Slashable faults include:
-
-- double-signing,
-- invalid quorum certificate participation,
-- provable censorship beyond policy thresholds,
-- fraudulent state transition,
-- undisclosed key compromise,
-- repeated downtime above the epoch threshold.
-
-Slashing proceeds go to the Security Fund and, where applicable, to challengers who provided valid evidence.
-
-### 6.4 Transaction Ordering and MEV
-
-To reduce extractive behavior:
-
-- governance and UBI transactions have priority classes,
-- within a class, ordering is deterministic by fee band then nonce then hash,
-- proposer discretion is deliberately minimized,
-- user-deployed arbitrary contracts are absent in v1, which removes the largest source of extractable ordering games.
+A binding rule, tally, distribution, or settlement calculation is not ready until an independent implementation can reproduce it from authorized inputs.
 
 ---
 
-## 7. Cryptography Profile
+## 3. The system model
 
-### 7.1 Normative Principle
+Essentia separates functions whose trust, privacy, accounting, and failure requirements differ.
 
-Ledger-critical security and private-ballot integrity MUST not depend on undocumented or ad hoc crypto.
+### 3.1 Public evidence plane
 
-### 7.2 Required Primitives
+The public evidence plane records:
 
-1. Hashing
-   - BLAKE3 or SHA3-256 with domain separation.
-   - Every protocol object has its own domain tag.
+- canonical policy texts and revisions;
+- proposal and decision identifiers;
+- public budgets and appropriations;
+- issuance totals by authority and purpose;
+- aggregate entitlement liabilities;
+- reserve and coverage attestations;
+- provider credentials and status commitments;
+- oracle inputs that can safely be public;
+- software release hashes;
+- audit reports;
+- emergency actions and expiration times;
+- aggregate performance and failure metrics.
 
-2. Signatures
-   - ML-DSA-65 is required for ledger-valid transaction signatures.
-   - Validator consensus messages also use ML-DSA-65.
-   - A secondary classical signature MAY be attached during migration, but it is not consensus-critical.
+The first implementation should be a signed append-only Merkle log with independent witnesses. [RFC 9162](https://www.rfc-editor.org/rfc/rfc9162) demonstrates the relevant pattern: clients can verify inclusion and consistency without treating the log operator as incapable of lying.
 
-3. Encryption for protected evidence access
-   - ML-KEM-768 is used to establish shared secrets.
-   - Symmetric encryption uses an AEAD construction.
+### 3.2 Private operational plane
 
-4. Credentials, presentations, and ballot-proof suites
-   - Credential documents follow a versioned VC-compatible format.
-   - Presentation, selective disclosure, and ballot-proof suites are versioned at the application layer, not hard-coded into consensus.
-   - If a cryptosuite is deprecated, credentials and election tooling can be upgraded without rewriting the chain.
+The private operational plane contains:
 
-### 7.3 Explicitly Removed Claim
+- account balances;
+- household and eligibility records;
+- provider invoices;
+- detailed transaction data;
+- protected evidence;
+- ballot ciphertexts or local ballot records;
+- recovery information;
+- risk and underwriting files.
 
-v0.7.0 does not claim that every privacy primitive in the system is fully post-quantum from genesis. It does claim:
+These records do not belong in a globally replicated public database. Access is purpose-bound, logged, time-limited where possible, and subject to independent review.
 
-- ledger signatures are PQ from genesis,
-- protected evidence exchange is PQ from genesis,
-- credential and ballot-proof systems are versioned and replaceable,
-- the protocol does not hard-code a classical-only privacy suite into the irreversible monetary core.
+### 3.3 Economic clearing plane
 
-That is technically honest and operationally safer.
+The clearing plane performs double-entry accounting for:
 
----
+- Essent balances and credit limits;
+- obligations between members and providers;
+- Essential Settlement Receivables;
+- treasury liabilities and assets;
+- reserve movements;
+- inter-node positions;
+- defaults, restructurings, and loss allocation.
 
-## 8. Governance
+### 3.4 Identity and eligibility plane
 
-### 8.1 Governance Rights
+This plane issues purpose-specific credentials and one-use nullifiers. It does not attempt to represent a whole person with one public identifier.
 
-Each eligible member DID has one baseline vote. Rights do not increase with wealth, stake, office, or reputation.
+### 3.5 Decision plane
 
-### 8.2 Proposal Model
+This plane supports different decision mechanisms under a common record format. It records what question was asked, who was eligible, what procedure was used, what evidence was supplied, how the result was calculated, who had implementation authority, and when the decision must be reviewed.
 
-Every proposal includes:
+### 3.6 Research plane
 
-- proposalId = hash(canonical_text),
-- election type,
-- snapshot height,
-- open/close times,
-- review period,
-- quorum rule,
-- threshold rule,
-- sunset/review date,
-- implementation hooks, if any.
+The research plane stores preregistered hypotheses, analysis plans, outcome definitions, de-identified datasets where lawful, code, deviations, results, and negative findings.
 
-The exact text decided MUST be content-addressed and hash-anchored.
-
-### 8.3 Ballot Privacy
-
-Binding elections MUST use encrypted ballots.
-
-Commit-reveal is not valid for secret constitutional or operational elections because the reveal phase makes ballot contents public. Commit-reveal MAY still be used for public signaling, public ratifications, or low-stakes non-secret coordination.
-
-### 8.4 Binding Election Modes
-
-1. Ranked-choice elections
-   - Ballots encode an ordered ranking.
-   - Ballots are encrypted, shuffled through a verifiable mixnet, then threshold-decrypted after close.
-   - The verifier replays the published ranking set under the deterministic RCV rules.
-
-2. Binary and budget votes
-   - MAY use threshold-encrypted tallying directly, if the tally scheme supports the ballot type.
-   - QV remains limited to budgeting and prioritization.
-
-### 8.5 Vote Updates
-
-A voter may update a ballot before close by submitting a higher sequence number.
-
-For an election E and voter nullifier N, the counted ballot is:
-
-    highest valid seq for (E, N) submitted before close
-
-Earlier ballots are ignored. Double-use of the same sequence number is invalid.
-
-### 8.6 Delegation
-
-- Delegation is topic-scoped.
-- Delegation is revocable.
-- Direct vote overrides delegation for that proposal.
-- Chains are allowed up to a policy-bound depth.
-- Cycles are resolved deterministically by dropping the newest edge in the cycle.
-
-Delegations are snapshot-resolved at close. Post-close delegation changes do not alter a closed election.
-
-### 8.7 Verifier Path
-
-For each election the chain publishes or references:
-
-- snapshot eligibility set,
-- encrypted ballots,
-- ballot validity proofs,
-- update-resolution map,
-- delegation trace,
-- decryption shares and proofs,
-- final ballot set for tally,
-- canonical tally transcript,
-- result digest.
-
-A public verifier CLI MUST reproduce the result from public artifacts.
-
-### 8.8 Civic Cost Model
-
-Voting is fee-less to the member.
-
-Chain costs are covered by a Civic Gas Pool (CGP) with public budgets, public relayer reimbursement, and per-election anti-spam limits.
+The research plane is part of the protocol because the Society's ability to correct itself is a production requirement.
 
 ---
 
-## 9. Contribution System and Anti-Exploit Minting
+## 4. The three economic layers
 
-### 9.1 Problem Statement
+The economic design has three claim layers and one supporting liquidity facility.
 
-The v0.6.0 mint equation was exploitable because attestor reputation directly increased payout. Any design where reviewers can increase issuance by signing harder creates a bribery and cartel surface.
+### 4.1 Essential Unit (`𝒰`): the entitlement layer
 
-The fix is structural:
+`𝒰` is a non-transferable claim held by a person. Its value is defined by a regional essential basket, not by the market price of `ℰ`.
 
-- reviewers do not create money,
-- budgets create the upper bound,
-- quests define the reward ceiling before work is accepted,
-- review only determines whether the claim qualifies and what fraction of the ceiling is earned.
+`𝒰` answers:
 
-### 9.2 Contribution Pipeline
+> What real minimum has this person been promised?
 
-1. Purpose creation
-   - Governance approves a Purpose with mission, metrics, epoch budget, and audit policy.
+A person spends `𝒰` directly with an eligible provider. `𝒰` is not a speculative asset and is not transferable between people. It expires or rolls forward only under publicly defined rules because its purpose is current access to essentials rather than accumulation.
 
-2. Quest creation
-   - A Quest is opened under a Purpose.
-   - The Quest has:
-     - scope,
-     - rubric,
-     - maximum payout R_q,
-     - evidence requirements,
-     - risk band,
-     - challenge window,
-     - conflict rules.
+### 4.2 Essential Settlement Receivable (`ℛ`): the bridge layer
 
-3. Claim submission
-   - The claimant submits:
-     - questId,
-     - evidence root,
-     - metadata,
-     - claimant bond,
-     - conflict disclosures,
-     - optional encrypted evidence for restricted reviewers.
+`ℛ` is created after a provider delivers a good or service in exchange for `𝒰`.
 
-4. Committee selection
-   - A review committee is sampled after submission using public randomness.
-   - Committee members must satisfy independence constraints:
-     - no self-review,
-     - no same-household or same-organization review,
-     - no undeclared financial conflict,
-     - geographic and trust-cluster diversity when available.
+`ℛ` answers:
 
-5. Review
-   - Each reviewer scores the claim against the published rubric.
-   - Reviewers do not choose an arbitrary payout.
+> What does the clearing system owe this provider for honoring the entitlement?
 
-6. Provisional outcome
-   - The claim enters pending state with a provisional score and provisional payout.
+Each `ℛ` identifies the issuer, underlying transaction, basket-reference value, settlement priority, maturity, and permitted settlement mix. It remains an explicit liability until settled or transparently restructured.
 
-7. Challenge window
-   - Any member with standing may challenge by posting a challenge bond and evidence.
+`ℛ` is the bridge between a person's entitlement and the provider-facing settlement system. It prevents the recipient from bearing liquidity risk at the point of use and prevents the provider's claim from disappearing into an unsupported token mint.
 
-8. Finalization
-   - If no valid challenge succeeds, the claim finalizes.
-   - Payout is minted from the Purpose budget and epoch cap.
+### 4.3 Essent (`ℰ`): the settlement layer
 
-9. Audit tail
-   - A portion of large payouts remains locked for a fixed audit horizon.
-   - Fraud discovered during the audit tail triggers clawback from locked balances and bond seizure.
+`ℰ` is a transferable unit used to settle reciprocal obligations, trade, funded grants, payroll, and provider receivables.
 
-### 9.3 Payout Formula
+`ℰ` answers:
 
-For a claim c on quest q under purpose p in epoch e:
+> What transferable claim can circulate through this economic network?
 
-    Score(c) = sum over rubric dimensions d of:
-               weight_d * median_j(score_j,d(c))
+The initial form of `ℰ` should be mutual credit rather than a scarce bearer token. An authorized participant may spend into a negative balance up to a reviewed credit limit. The seller receives an equal positive balance. The gross ability to transact expands while the system's net position remains balanced before fees, public issuance, reserves, and losses.
 
-where each score_j,d(c) is in [0, 1] and the rubric weights sum to 1.
+`ℰ` can create useful purchasing power where participants have reciprocal demand, idle capacity, future income, and confidence in the clearing institution. It cannot create missing food, housing, medicine, electricity, or imported goods that nobody can provide.
 
-The payout is:
+### 4.4 External Liquidity Bridge
 
-    P(c) = min( R_q * Score(c), B_rem(p,e), C_rem(e) )
+The External Liquidity Bridge holds or arranges the assets and relationships required to settle `ℛ` obligations outside the `ℰ` network.
 
-where:
+It may include:
 
-- R_q = quest reward ceiling approved before work,
-- B_rem(p,e) = remaining purpose budget for epoch e,
-- C_rem(e) = remaining global contribution mint capacity for epoch e.
+- national-currency deposits;
+- short-duration liquid reserves;
+- committed bank or cooperative credit lines;
+- grants and donations;
+- pooled member contributions;
+- cooperative profits and commons revenue;
+- insured payment facilities;
+- contracts with external providers;
+- cross-node settlement agreements.
 
-Reviewer reputation is not in this formula.
+It answers:
 
-### 9.4 Why This Is Harder to Exploit
+> How will internal claims reach goods and institutions that do not accept `ℰ`?
 
-- Splitting work into many micro-claims does not increase total payout beyond quest ceilings and purpose budgets.
-- Cartel reviewers cannot inflate mint above approved budgets.
-- Reviewers cannot mint outside an approved quest.
-- Budget exhaustion stops over-issuance automatically.
-- Challenge and audit create delayed finality for suspicious claims.
-- Large claims are more expensive to fake because they require larger bonds, longer challenge windows, and larger locked tails.
-
-### 9.5 Default Risk Controls
-
-Starting defaults, subject to governance revision:
-
-- review committee size: 5, or 7 for high-risk claims,
-- claimant bond: 1 to 5 percent of R_q by risk band,
-- minimum challenge window: 7 days,
-- high-risk challenge window: 21 days,
-- locked audit tail: 20 percent of payout for 90 days,
-- mandatory second audit for top-decile payouts,
-- maximum quest ceiling set by Purpose policy.
-
-### 9.6 Reviewer Compensation
-
-Reviewers are paid a fixed review stipend plus a small complexity increment. Reviewer pay is independent of claim size. This removes the incentive to approve bigger mints for bigger reviewer rewards.
-
-### 9.7 Duplicate and Related-Party Controls
-
-A claim is auto-flagged if any of the following hold:
-
-- evidence root already used,
-- same work unit key already finalized,
-- substantial similarity to another claim above threshold,
-- claimant and reviewer share an organization or disclosed financial tie,
-- claimant is funding the reviewer through another active claim chain.
-
-Flagged claims require expanded review or are rejected.
-
-### 9.8 Failed and Fraudulent Claims
-
-If a claim is rejected for ordinary insufficiency, the claimant bond may be partially refunded according to policy.
-
-If a claim is fraudulent:
-
-- claimant bond is slashed,
-- reviewer bonds may be slashed for negligent or collusive approval,
-- locked payout is clawed back first,
-- unrecouped loss becomes a public fraud record and blocks future payouts until resolved,
-- the challenger receives a reward if the challenge was valid.
+The External Liquidity Bridge is a balance sheet and a set of enforceable relationships. It is not an oracle and it does not replace `ℛ`; it supplies one group of settlement resources behind `ℛ`.
 
 ---
 
-## 10. Reputation and Integrity Signals
+## 5. Essential Units
 
-The protocol keeps STAR and FLAME, but only in limited roles.
+### 5.1 Unit of account
 
-### 10.1 STAR
+For region `r`, household type `h`, category `k`, and period `t`, define:
 
-STAR is a bounded reviewer reliability score. It affects:
+```text
+BasketCost(r, h, k, t)
+```
 
-- eligibility for higher-risk review committees,
-- audit sampling probability,
-- surfacing and routing of work.
+as the observed cost of the ratified essential basket for that category.
 
-It does not affect:
+The complete floor is:
 
-- voting rights,
-- UBI rights,
-- claim payout size.
+```text
+FloorCost(r, h, t) = sum_k BasketCost(r, h, k, t)
+```
 
-### 10.2 FLAME
+The basket may include:
 
-FLAME is a decaying misconduct score for reviewers and vendors.
+- food and household necessities;
+- safe shelter;
+- energy and water;
+- basic healthcare and medication;
+- communication;
+- transport required for ordinary participation;
+- clothing and personal care;
+- disability and accessibility costs;
+- childcare or dependent care where relevant;
+- a flexible allowance that preserves personal agency.
 
-A simple update rule is:
+A purely restricted benefit is not equivalent to cash. The basket therefore needs a discretionary component, and the Society should separately fund an unrestricted Autonomy Dividend when resources permit.
 
-    FLAME_t+1 = min(1, FLAME_t * exp(-lambda * delta_t) + penalty_t)
+### 5.2 Basket governance
 
-High FLAME reduces review eligibility and can trigger mandatory oversight. It does not erase personhood or voting rights.
+The basket is both empirical and normative.
 
-### 10.3 Why Reputation Is Constrained
+Price observation can tell us what selected goods cost. It cannot decide what a dignified minimum includes. That decision requires public deliberation, rights analysis, lived experience, accessibility expertise, and periodic review.
 
-Reputation systems become shadow caste systems if they touch rights or money creation directly. Essentia therefore uses reputation as a narrow operational signal, not as a civil hierarchy.
+Each regional basket must publish:
 
----
+- included goods and services;
+- quantities and minimum quality;
+- acceptable substitutions;
+- geographic boundary;
+- household-equivalence rules;
+- accessibility adjustments;
+- price-source list;
+- observation timestamps;
+- availability rules;
+- weighting method;
+- dispute process;
+- review date.
 
-## 11. Monetary System
+The calculation must be reproducible from authorized source data.
 
-### 11.1 Instruments
+### 5.3 Price and availability inputs
 
-1. Essent (E)
-   - transferable fungible currency,
-   - used for general exchange, payroll, grants, bonds, and settlement.
+No single source controls the basket.
 
-2. Essential Unit (U)
-   - non-transferable,
-   - expiring,
-   - restricted to essentials spending,
-   - redeemable by approved vendors for E at public rates.
+Inputs may include:
 
-### 11.2 Essent Issuance Sources
+- official consumer-price series;
+- regional price-parity data;
+- provider catalog prices;
+- actual transaction receipts;
+- rental and utility observations;
+- healthcare and transport schedules;
+- independent field sampling;
+- stockout and waiting-time data;
+- household expenditure surveys;
+- participatory minimum-income studies.
 
-E can be created only by these modules:
+A low price for an unavailable item is not a low cost of living.
 
-- contribution mint from finalized claims,
-- public treasury grants approved by governance,
-- time-bounded bootstrap issuance approved in the launch constitution,
-- emergency issuance approved by a higher constitutional threshold and automatic sunset.
+### 5.4 Issuance
 
-No other mint path is valid.
+For member `i`:
 
-### 11.3 Bootstrap Issuance
+```text
+𝒰_issue(i, t) = coverage(i, t) * FloorCost(region_i, household_i, t)
+```
 
-A pure percentage-of-supply cap fails at genesis because supply starts near zero.
+`coverage` must be published.
 
-Therefore mainnet uses two issuance eras:
+A pilot covering 20 percent of a basket must say 20 percent. The interface may not call a partial experiment a complete Freedom Floor.
 
-1. Bootstrap era
-   - a published absolute issuance ceiling per epoch,
-   - a hard cumulative ceiling,
-   - no founder liquid allocation,
-   - every unit assigned to public purposes, public grants, security, or approved work.
+𝒰 issuance creates a liability of the Essential Clearing Fund. The system must recognize that liability immediately, not only when the 𝒰 is spent.
 
-2. Mature era
-   - annual mint bound by policy and circulating supply.
+### 5.5 Spending and provider receivables
 
-Default mature-era bound:
+A provider accepts 𝒰 only under a published contract.
 
-    AnnualMint(E) <= min( rho * CirculatingSupply_prev, PolicyCap )
+When the provider supplies an eligible good or service:
 
-with rho set by governance inside a constitutionally bounded range.
+```text
+Member 𝒰 balance        decreases
+Provider ℛ             increases
+Clearing Fund liability  moves from unspent 𝒰 to payable ℛ
+```
 
-### 11.4 Essential Unit (U) Policy
+An Essential Settlement Receivable (`ℛ`) is a provider claim denominated in the same basket-reference value as the transaction.
 
-U is the Freedom Floor rail.
+The provider does not receive an unlimited automatic mint of `ℰ`.
 
-Properties:
+### 5.6 Provider protections
 
-- issued only to eligible members in active rollout waves,
-- expires after a policy-set horizon,
-- cannot be transferred peer-to-peer,
-- may only be spent to vendors with the appropriate credential categories,
-- redeemed by vendors for E through the clearing module,
-- indexed to regional essentials baskets under public rules.
+Provider participation must be voluntary and contractually clear.
 
-### 11.5 Vendor Redemption
+Each provider contract defines:
 
-Each region r and epoch e publishes a clearing rate:
+- categories;
+- price rules;
+- service standards;
+- settlement mix;
+- settlement timing;
+- voluntary ℰ acceptance share;
+- external-currency share;
+- netting rights;
+- credit exposure;
+- dispute resolution;
+- audit requirements;
+- exit and continuity terms.
 
-    redeem_rate[r,e] = E per U
-
-The rate is derived from the regional essentials basket process and bounded by a redemption band. The oracle path uses multiple sources, medianization, circuit breakers, and public override only through auditable governance action.
-
-### 11.6 Sinks and Discipline
-
-E sinks include:
-
-- transaction fees outside subsidized civic actions,
-- validator bonds locked for operations,
-- slashing,
-- optional policy burns if separately approved.
-
-This is not a promise of zero volatility. It is a rules-based monetary constitution.
-
----
-
-## 12. Treasury
-
-### 12.1 Treasury Structure
-
-The treasury is on-chain and partitioned into explicit funds:
-
-- Civic Gas Pool,
-- Security Fund,
-- Purpose Budgets,
-- UBI Clearing Reserve,
-- Grants and Research,
-- Emergency Buffer.
-
-Funds cannot be silently commingled.
-
-### 12.2 Spending Rules
-
-Every spend must reference:
-
-- budget authority,
-- proposal or policy source,
-- recipient class,
-- reporting obligation,
-- expiry or review date.
-
-Unspent budget rolls forward only if policy allows it.
-
-### 12.3 No Hidden Founder Class
-
-There is no founder premine, hidden vest, or private mint authority. If bootstrap organizers require resources, those resources come from disclosed public budget lines with public terms.
+The Society must not fund dignity for recipients by quietly making small providers involuntary creditors.
 
 ---
 
-## 13. Privacy, Data Minimization, and Public Legibility
+## 6. Settlement waterfall
 
-### 13.1 Personal Privacy
+Every ℛ is settled through a published waterfall.
 
-The protocol minimizes personal data by design.
+### Step 1: obligation netting
 
-Protected data includes:
+The clearing engine identifies reciprocal obligations.
 
-- private communications,
-- biometric and health data,
-- precise location history,
-- identity linkages,
-- recovery secrets,
-- restricted evidence in restorative or crisis contexts.
+If a provider owes ℰ, fees, rent, supplies, payroll, energy, taxes where lawful, or other eligible obligations inside the network, those obligations may be netted against the ℛ with consent and complete accounting.
 
-### 13.2 Institutional Transparency
+Netting reduces outside liquidity needs without pretending the underlying goods were free.
 
-The stronger the public power, the stronger the transparency requirement.
+### Step 2: mutual-credit ℰ
 
-The following must be public or publicly reproducible:
+The provider may accept a contracted share in `ℰ`.
 
-- governance rules,
-- eligibility criteria,
-- code hashes and release artifacts,
-- treasury budgets and flows,
-- claim rubrics and payouts,
-- vendor redemption flows,
-- validator set and slashing events,
-- model and oracle inputs where they affect rights or money.
+This settlement creates or transfers ℰ under the provider's credit terms. The provider must have realistic ways to spend ℰ, repay ℰ liabilities, or convert a bounded share later.
 
-### 13.3 Content Addressing and Persistence
+### Step 3: treasury ℰ
 
-Critical texts and evidence bundles are content-addressed off-chain and anchored on-chain. Redundant storage providers are used so that no single actor can erase history.
+The treasury may use positive `ℰ` balances acquired from fees, revenues, sales, repayments, or funding received before the settlement epoch.
 
----
+### Step 4: external reserve settlement
 
-## 14. Security Model
+The External Liquidity Bridge pays the external-currency share.
 
-### 14.1 Threats
+### Step 5: direct procurement or in-kind clearing
 
-1. Sybil identity attacks
-2. reviewer collusion
-3. duplicate claims and payout farming
-4. vendor fraud on U redemption
-5. validator censorship or double-sign
-6. key compromise
-7. ballot coercion
-8. oracle manipulation
-9. roadmap drift into private power
+The network may satisfy part of the provider claim through supplies, energy, transport, facilities, or other contracted inputs.
 
-### 14.2 Mitigations
+### Step 6: voluntary deferred receivable
 
-- Personhood credentials with challenge and appeal
-- reviewer independence rules and random committee selection
-- bonds, slashing, challenge rewards, and audit tails
-- explicit quest ceilings and epoch budgets
-- vendor credentials, redemption audits, and category controls
-- BFT finality with public validator identity and bonds
-- social recovery and time-locked key rotation
-- encrypted ballots with verifiable decryption
-- multi-source medianized redemption inputs with circuit breakers
-- sunset clauses and refactoring cycles for policy review
+A provider may voluntarily accept a time-bounded deferred claim with a published yield or discount.
 
-### 14.3 What the Chain Cannot Solve Alone
+The recipient's entitlement is not reversed because the clearing system is late. The provider receives the agreed claim and the shortfall becomes an institutional liability.
 
-Essentia can reduce fraud and concentrate power less. It cannot make identity, prices, or human judgment perfect. The hardest parts remain social:
+### Prohibited step: involuntary infinite ℰ mint
 
-- personhood verification,
-- conflict-of-interest disclosure,
-- evidence quality,
-- local legal compliance,
-- vendor onboarding.
-
-The protocol therefore favors bounded authority, public review, and reversible governance over magical guarantees.
+The protocol may not respond to missing settlement capacity by minting whatever quantity of ℰ an external price formula demands.
 
 ---
 
-## 15. Launch Criteria and Phased Rollout
+## 7. Coverage and solvency
 
-### 15.1 Verifier-First Rule
+Aggregate value is not enough. A fund can look solvent in currency terms while lacking housing, medicine, or food in a specific region.
 
-No mainnet launch until these are public:
+Essentia therefore tracks at least three kinds of coverage.
 
-- reproducible node builds,
-- verifier CLI for elections,
-- verifier CLI for claim payouts,
-- public test vectors,
-- adversarial test reports,
-- at least one public mock election,
-- at least one public mock claim cycle,
-- external audit of the minting and governance modules.
+### 7.1 Category coverage
 
-### 15.2 Phases
+For category `k`, region `r`, and horizon `t`:
 
-Phase 0 - simulation
-- run elections and claim cycles off-chain,
-- finalize data model, proofs, and verifier outputs.
+```text
+CategoryCoverage(k, r, t) =
+    ContractedDeliverableCapacity(k, r, t)
+    / ExpectedEUClaims(k, r, t)
+```
 
-Phase 1 - civic testnet
-- DID registry,
-- personhood nullifiers,
-- proposals,
-- encrypted ballots,
-- treasury,
-- claim reviews with fake money,
-- vendor credential flows.
+This must be measured in physical or service units where possible.
 
-Phase 2 - guarded mainnet
-- capped bootstrap issuance,
-- real validator bonds,
-- real claims under tight purpose budgets,
-- small U pilots in limited regions.
+Examples:
 
-Phase 3 - federated expansion
-- broader validator rotation,
-- more vendor regions,
-- higher throughput dissemination layer if needed,
-- formalized inter-community federation.
+- meals;
+- bed-nights;
+- kilowatt-hours;
+- medication courses;
+- clinical appointments;
+- transit trips;
+- data-service months.
 
-### 15.3 Kill Switches and Rollback
+### 7.2 External liquidity coverage
 
-Emergency pause powers are strictly bounded:
+```text
+ExternalLiquidityCoverage(t) =
+    EligibleLiquidExternalAssets(t)
+    / ProjectedExternalSettlementNeeds(t)
+```
 
-- pause can stop new mint finalization and vendor redemption,
-- pause cannot rewrite history,
-- pause expires automatically unless reauthorized,
-- any pause event triggers mandatory public review.
+Assets require haircuts based on liquidity, credit risk, custody risk, currency mismatch, legal access, and concentration.
+
+### 7.3 Essential coverage
+
+```text
+EssentialCoverage(t) =
+    HaircutValue(
+        liquid reserves
+        + contracted capacity
+        + eligible receivables
+        + nettable obligations
+        + committed revenues
+      )
+    / OutstandingEUAndESRLiabilities(t)
+```
+
+No single ratio authorizes issuance. Category coverage, liquidity coverage, concentration, and stress projections all matter.
+
+### 7.4 Coverage reports
+
+The public evidence plane publishes:
+
+- aggregate 𝒰 issued;
+- aggregate 𝒰 spent;
+- ℛ outstanding;
+- settlement aging;
+- coverage by category and region;
+- reserve composition and haircuts;
+- provider concentration;
+- ℰ credit outstanding;
+- defaults and restructurings;
+- stress-test results;
+- breaches and remediation.
+
+Personal balances and individual purchases remain private.
 
 ---
 
-## 16. Parameters Requiring Public Ratification
+## 8. Essent as mutual and public credit
 
-The whitepaper defines the mechanisms. The following must still be ratified in policy:
+### 8.1 Why not fixed supply
 
-- bootstrap issuance schedule,
-- mature-era rho range,
-- review committee size bands,
-- challenge and audit horizons,
-- default claimant and reviewer bond rates,
-- vendor category taxonomy,
-- regional basket methodology,
-- validator set expansion schedule,
-- emergency issuance threshold,
-- emergency pause threshold.
+A fixed-supply speculative asset may appreciate as adoption grows. It may also become volatile, concentrate in early holders, reward hoarding, and make ordinary pricing difficult.
+
+A currency intended for trade needs enough elasticity to clear useful exchange. ℰ should expand when creditworthy participants have reciprocal demand and contract when credit is repaid.
+
+### 8.2 Mutual-credit issuance
+
+For an approved buyer `a` and seller `b`:
+
+```text
+balance[a] -= amount
+balance[b] += amount
+```
+
+The transaction is valid only when:
+
+```text
+balance[a] - amount >= -credit_limit[a]
+```
+
+The sum of balances within a closed clearing domain remains zero before fees, public positions, reserve accounts, and recognized losses.
+
+Credit limits are underwriting decisions. They depend on:
+
+- verified revenue or productive capacity;
+- transaction history;
+- concentration;
+- cyclicality;
+- outside obligations;
+- collateral or guarantees where appropriate;
+- community guarantee pools;
+- dispute and default history;
+- the provider's ability to earn `ℰ`.
+
+Credit limits are not civil rank and cannot affect political rights.
+
+### 8.3 Public-credit issuance
+
+The Society may spend ℰ from a public negative position only under a ratified budget and an explicit backing plan.
+
+Possible backing includes:
+
+- future dues or fees;
+- cooperative revenue;
+- commons revenue;
+- grants;
+- external reserves;
+- contracted production;
+- recoverable loans;
+- legally authorized revenue;
+- a measured increase in demand to hold `ℰ`.
+
+The public issuer is carrying debt to the network. Calling it minting does not remove the debt.
+
+### 8.4 Monetary expansion dividend
+
+A future mature network may test a universal monetary expansion dividend.
+
+The hypothesis is that when desired real ℰ balances, transaction demand, and productive capacity increase together, part of the newly supportable ℰ supply can be issued equally rather than allocated entirely through private credit.
+
+A conservative bound is:
+
+```text
+PublicNetIssue(t) <= min(
+    EstimatedRealBalanceDemandGrowth(t),
+    HaircutSpareCapacityValue(t),
+    RatifiedRiskBudget(t),
+    InflationAndLiquidityLimit(t)
+)
+```
+
+This is a research hypothesis, not a genesis rule. The default value is zero until demand estimation, distribution effects, price response, and governance have survived bounded pilots.
+
+The Society may not use speculative ℰ price appreciation as the primary funding source for a Freedom Floor.
+
+### 8.5 Demand for ℰ
+
+Durable ℰ demand must come from useful obligations and exchange.
+
+Possible demand sources include:
+
+- repayment of ℰ credit;
+- purchases from providers that price goods or services in ℰ;
+- settlement of invoices;
+- network service fees;
+- membership dues where lawful and democratically authorized;
+- validator or operator bonds;
+- cooperative rent, energy, education, transport, or care;
+- provider acceptance commitments received in exchange for network credit;
+- inter-node settlement;
+- treasury sales of useful assets or services.
+
+Burning tokens or creating artificial scarcity does not create a productive economy.
+
+### 8.6 Credit risk
+
+A mutual-credit system moves credit creation into the network. It does not eliminate default.
+
+Losses must follow a published waterfall:
+
+1. delinquent participant recovery and restructuring;
+2. pledged collateral or guarantees;
+3. transaction-specific insurance;
+4. local guarantee pool;
+5. node capital;
+6. federation protection fund;
+7. transparent mutualization within ratified limits;
+8. resolution.
+
+Personal subsistence 𝒰 may not be clawed back to cover an institutional underwriting error.
+
+### 8.7 Fungibility and issuer risk
+
+Early ℰ balances should not pretend all issuers are equally safe.
+
+A practical architecture can use one denomination with identifiable node exposure, similar to deposits denominated in the same national unit but owed by different institutions.
+
+Par exchange between node-issued ℰ requires:
+
+- common accounting standards;
+- reserve and capital rules;
+- audited exposures;
+- settlement limits;
+- loss-sharing rules;
+- credible resolution;
+- reciprocal acceptance;
+- a federation clearing process.
+
+Until those conditions exist, cross-node ℰ may carry limits or node-specific exchange rates. Hiding credit risk behind one ticker does not create trust.
 
 ---
 
-## 17. Summary of Material Changes from v0.6.0
+## 9. Can shared agreement create purchasing power?
 
-1. Removed direct attestor-weighted minting.
-2. Replaced it with budgeted proof-of-contribution.
-3. Removed commit-reveal as a valid private election mode.
-4. Clarified that encrypted ballots are mandatory for binding secret votes.
-5. Split passkey login from ledger-control signatures.
-6. Moved ledger-critical signatures and KEMs to NIST PQC primitives.
-7. Reduced the protocol scope to audited native modules.
-8. Simplified reputation so it cannot become a civil caste or a mint amplifier.
-9. Added bootstrap-era monetary logic so genesis is coherent.
-10. Added audit tails, clawbacks, reviewer independence rules, and duplicate-claim controls.
+Yes, within limits.
+
+A network can assign ℰ as the unit used to settle invoices, repay credit, pay dues, obtain network services, and purchase goods from participating providers. If enough participants expect others to accept ℰ, acceptance becomes self-reinforcing. Software can make issuance rules, balances, and settlement history credible enough to support that coordination.
+
+That creates real purchasing power inside the network.
+
+The effect is not imaginary. A mutual-credit purchase can activate idle labor, inventory, rooms, transport, or productive capacity even when outside currency is scarce. Obligation netting can reduce the outside money needed to settle a web of debts. New exchange can create income and output that would not otherwise occur.
+
+But shared agreement does not repeal physical scarcity or external dependence.
+
+If the network needs insulin, semiconductors, fuel, land, or labor from people who reject ℰ, it needs something those providers accept. That may be external currency, goods, reciprocal services, credit, or an enforceable obligation.
+
+[Bitcoin](https://bitcoin.org/bitcoin.pdf) demonstrates that an unbacked digital asset can acquire market value through credible scarcity, network growth, utility, liquidity, expectations, and speculation. It does not demonstrate that any token can acquire stable purchasing power, or that token appreciation can fund a universal entitlement indefinitely.
+
+Many people agreeing is powerful.
+
+What they are agreeing to deliver still matters.
+
+---
+
+## 10. 𝒰-to-ℰ convertibility
+
+### 10.1 Convertibility is optional infrastructure
+
+𝒰 may support a conversion window into ℰ to improve flexibility. This is not the source of 𝒰's value and cannot be an unlimited protocol promise.
+
+The person's primary right is direct access to the basket.
+
+### 10.2 Requested conversion
+
+For an 𝒰 value `V` and an executable ℰ price `P_exec`:
+
+```text
+RequestedE = V / P_exec
+```
+
+If `V = 1,000` reference-currency units and `P_exec = 0.001`, then:
+
+```text
+RequestedE = 1,000,000 ℰ
+```
+
+The arithmetic is correct. The conclusion that one million newly minted ℰ now possesses 1,000 units of purchasing power is not.
+
+### 10.3 Executable price
+
+`P_exec` is not the last displayed trade.
+
+It must estimate how much outside value the actual conversion can realize after price impact.
+
+Inputs include:
+
+- multiple independent venues;
+- time-weighted prices;
+- executable order-book depth;
+- completed volume;
+- price-impact curves;
+- market-maker quotes;
+- reserve redemption value;
+- ℰ-denominated goods actually available;
+- wash-trading and related-party filters;
+- data-source staleness;
+- exchange and custody risk.
+
+A robust aggregation may use a trimmed or weighted median, but aggregation does not cure shared-source failure.
+
+### 10.4 Conversion bound
+
+```text
+ConvertibleE = min(
+    RequestedE,
+    TreasuryEAvailable,
+    MarketDepthCap,
+    MonetaryExpansionCap,
+    ExternalLiquidityCap,
+    ParticipantLimit
+)
+```
+
+The system must estimate the external or network purchasing power that can be delivered, not merely the ℰ quantity that can be printed.
+
+### 10.5 Conversion corridor
+
+The treasury may operate a bounded corridor:
+
+- below a lower threshold, it buys ℰ using available reserves or accepts ℰ for obligations;
+- above an upper threshold, it sells ℰ or issues against authorized demand;
+- between thresholds, market and network exchange determine the price.
+
+A corridor is credible only to the extent of available reserves, recurring revenues, obligation demand, and market depth.
+
+If the lower defense is exhausted, the protocol widens or suspends the corridor and publishes the breach. It does not claim the peg survived because the oracle still reports a number.
+
+### 10.6 Stress modes
+
+#### ℰ market failure
+
+If ℰ becomes thin, manipulated, or nearly valueless:
+
+- direct 𝒰 spending continues where provider capacity remains;
+- new 𝒰-to-ℰ conversion pauses;
+- treasury ℰ sales and discretionary public ℰ issuance stop;
+- reserve and provider settlement continues under contracts;
+- market data enters incident mode;
+- the failure and exposure are published.
+
+#### External settlement failure
+
+If banks, payment partners, or reserve access fail:
+
+- netting and ℰ settlement continue where accepted;
+- providers may choose in-kind or deferred settlement;
+- external claims are queued transparently;
+- 𝒰 issuance may be reduced to demonstrated direct capacity;
+- no hidden arrears are created.
+
+#### Provider shortage
+
+If a category lacks deliverable capacity:
+
+- the interface marks the category unavailable or partially covered;
+- procurement and mutual aid activate;
+- emergency substitutions require quality and rights review;
+- the basket price does not pretend unavailable supply exists.
+
+#### Physical shortage
+
+If the goods do not exist in sufficient quantity, no monetary operation can create them immediately. The response is rationing under public rules, emergency production, substitution, import, and honest disclosure.
+
+### 10.7 Autonomy Dividend
+
+A mature system should distinguish:
+
+- **𝒰**, which protects access to essentials;
+- **Autonomy Dividend**, an unrestricted ℰ or external-currency payment funded from actual revenue, reserves, grants, commons income, or validated monetary expansion.
+
+This prevents the entire Freedom Floor from depending on a speculative conversion while recognizing that dignity requires choice beyond a controlled catalog.
+
+---
+
+## 11. Treasury and reserve architecture
+
+### 11.1 Legal ownership
+
+External reserves must be held by identifiable legal entities under defined custody, audit, insolvency, and redemption rules.
+
+A hash of a bank statement is not a reserve.
+
+### 11.2 Fund separation
+
+At minimum:
+
+- Essential Clearing Fund;
+- External Liquidity Reserve;
+- Mutual Credit Guarantee Pool;
+- Node Capital Account;
+- Federation Protection Fund;
+- Security and Operations Fund;
+- Research and Audit Fund;
+- Emergency Procurement Fund.
+
+Funds may not be silently commingled.
+
+### 11.3 Reserve eligibility
+
+Eligible reserve assets require policy for:
+
+- issuer and custodian risk;
+- duration;
+- volatility;
+- liquidity;
+- currency mismatch;
+- legal seizure risk;
+- geographic concentration;
+- operational access;
+- audit frequency.
+
+### 11.4 Proof of reserves and liabilities
+
+The system publishes both sides.
+
+Reserve disclosure without outstanding 𝒰, ℛ, ℰ credit, guarantees, and pending withdrawals is incomplete. [Project Pyxtrial's](https://www.bis.org/project/pyxtrial) distinction between asset and liability monitoring is the right direction: solvency requires comparing what is held with what is owed.
+
+### 11.5 No founder privilege
+
+There is no hidden premine, private redemption seniority, or founder withdrawal class.
+
+Organizers may be paid through public budgets under the same accounting and disclosure rules as other institutional recipients.
+
+---
+
+## 12. Identity, eligibility, and recovery
+
+### 12.1 No universal DID requirement
+
+Essentia may support W3C-compatible [decentralized identifiers](https://www.w3.org/TR/did-core/) and [verifiable credentials](https://www.w3.org/TR/vc-data-model-2.0/). It must not require one permanent public DID for voting, healthcare, education, money, safety, and speech.
+
+Different contexts require different identifiers.
+
+### 12.2 Purpose-bound credentials
+
+Examples:
+
+- eligibility credential for 𝒰;
+- one-election voting credential;
+- provider-category credential;
+- operator-role credential;
+- public authorship key;
+- professional qualification;
+- age or residency range proof;
+- recovery-authority credential.
+
+Credentials reveal the minimum claim needed for the action.
+
+### 12.3 Proof of personhood
+
+A DID proves control of a key, not uniqueness or humanity.
+
+No known proof-of-personhood method simultaneously solves global inclusion, duplicate resistance, privacy, coercion, recovery, accessibility, and institutional capture.
+
+Essentia therefore uses a plural, risk-based process:
+
+- multiple enrollment routes;
+- trained human review;
+- optional documents or biometrics through separated providers;
+- capped community attestations;
+- privacy-preserving duplicate detection;
+- random audits;
+- continuing liveness appropriate to the right;
+- protected challenge;
+- independent appeal;
+- recovery without public linkage.
+
+No raw biometric, government-ID image, address, or recovery secret enters the public log.
+
+### 12.4 One-use nullifiers
+
+For one-person-one-action processes, a credential can derive a context-specific nullifier:
+
+```text
+nullifier = H(secret, action_domain, action_id)
+```
+
+The verifier can reject duplicate use within the same action without learning where else the credential was used.
+
+The cryptographic scheme must be versioned and replaceable.
+
+### 12.5 Recovery
+
+Recovery must support people who lose devices, flee abuse, experience cognitive crisis, or rely on assistance.
+
+Options may include:
+
+- multiple devices;
+- time-locked guardian quorum;
+- institutional recovery;
+- printed or offline recovery material;
+- protected assisted custody;
+- re-enrollment with fraud review.
+
+No one loses food, personhood, or political rights because they misplaced a seed phrase.
+
+---
+
+## 13. Governance
+
+### 13.1 Decision records
+
+Every binding decision record contains:
+
+- canonical question and alternatives;
+- decision class;
+- legal or constitutional authority;
+- eligible population;
+- evidence packet;
+- conflict disclosures;
+- deliberation period;
+- voting or selection method;
+- quorum and threshold;
+- tally procedure;
+- implementation owner;
+- effective date;
+- review or sunset date;
+- appeal or challenge path;
+- public result artifacts.
+
+### 13.2 Method by decision type
+
+Essentia does not impose ranked-choice voting on every multi-option decision.
+
+Possible defaults:
+
+| Decision | Candidate mechanism |
+| --- | --- |
+| Elect one office | locally chosen ranked or approval method |
+| Elect a body | proportional representation |
+| Rights limitation | supermajority plus rights review |
+| Technical standard | expert proposal, public comment, ratification, sunset |
+| Local operational choice | local vote within shared rights |
+| Budget priorities | participatory budgeting or tested allocation method |
+| Evidence review | independent panel with published criteria |
+| Deadlock or representative sample | sortition with deliberation |
+| Emergency action | narrow temporary authority plus automatic review |
+
+No procedure eliminates strategic behavior, unequal information, or agenda power.
+
+### 13.3 Delegation
+
+Delegation is experimental.
+
+If used, it is:
+
+- topic-specific;
+- revocable;
+- time-bounded;
+- capped to prevent extreme concentration;
+- visible at aggregate level;
+- directly overridden by the member;
+- evaluated against direct voting and deliberative alternatives.
+
+### 13.4 Ballot privacy
+
+Private ballots require coercion resistance, eligibility verification, secret selection, public tally verification, accessibility, recovery, and dispute resolution.
+
+The [National Academies concluded](https://doi.org/10.17226/25120) that marked ballots should not be returned over the internet because current internet voting cannot guarantee secrecy, security, and verifiability at once. Essentia must not turn an unsolved election problem into a release milestone.
+
+Early governance may use in-person, paper, or established election systems with cryptographic publication of public artifacts. The protocol records evidence; it does not require unsafe internet voting.
+
+### 13.5 Institutional roles
+
+Role credentials authorize actions. They do not create superior civic status.
+
+Roles include:
+
+- log operator;
+- witness;
+- clearing operator;
+- treasury operator;
+- auditor;
+- basket steward;
+- enrollment provider;
+- appeals officer;
+- election administrator;
+- emergency controller.
+
+Every role has scope, expiration, conflict rules, and removal procedure.
+
+---
+
+## 14. Contribution funding
+
+The v0.1.0 prototype includes purposes, quests, claims, reviews, and budget-capped minting. The structure is useful as a procurement experiment but should not be interpreted as a scientific measurement of social value.
+
+### 14.1 Funded work
+
+A contribution payment must reference a funded budget or authorized credit position.
+
+```text
+MaximumPayout = min(
+    QuestCeiling,
+    RemainingPurposeBudget,
+    RemainingAuthorizedCredit,
+    SettlementCapacity
+)
+```
+
+Review determines whether work meets the published terms. Review does not create purchasing power by increasing a score.
+
+### 14.2 No universal impact score
+
+There is no single scalar that can compare caregiving, software, ecological repair, art, mediation, research, and survival.
+
+Different programs may use different outcome measures. Rights may not depend on those measures.
+
+### 14.3 Reviewer controls
+
+Where review is required:
+
+- criteria are published before submission;
+- conflicts are disclosed;
+- committee selection is independent;
+- review pay does not increase with approved payout;
+- minority findings are preserved;
+- appeal exists;
+- high-impact decisions receive external audit.
+
+### 14.4 Reputation
+
+Essentia does not maintain a universal public STAR or FLAME score.
+
+Narrow operational reliability signals may exist for specific roles, such as whether an operator met uptime obligations or whether a provider settled invoices on time. They remain purpose-limited, contestable, expiring, and excluded from civil rights and general economic access.
+
+---
+
+## 15. Ledger architecture and consensus
+
+### 15.1 Stage 1: transparency log
+
+The first pilot uses:
+
+- canonical serialized events;
+- signed Merkle-tree heads;
+- inclusion proofs;
+- consistency proofs;
+- independent witnesses;
+- public mirrors;
+- offline audit tools;
+- ordinary transactional databases for private state;
+- correction events rather than destructive edits.
+
+This architecture is easier to operate, inspect, and replace than a new consensus network.
+
+### 15.2 Stage 2: federated replicated log
+
+When several independent nodes share authority, they may cross-sign or replicate event roots. Conflicting views become detectable.
+
+### 15.3 Stage 3: Byzantine fault tolerant consensus
+
+A [HotStuff-family](https://doi.org/10.1145/3293611.3331591) or comparable protocol becomes relevant only when:
+
+- independent operators share write authority;
+- deterministic finality is required;
+- network and failure assumptions are explicit;
+- validator governance is mature;
+- clients need a common state without trusting one operator.
+
+Consensus security does not solve governance, personhood, or oracle truth.
+
+### 15.4 No proof of stake
+
+ℰ ownership does not control consensus or governance.
+
+Validator admission is institutional and public. Bonds may secure operational obligations, but bond size does not purchase votes.
+
+### 15.5 Determinism
+
+Consensus-critical calculations use canonical encoding and integer or rational fixed-point arithmetic.
+
+External prices and basket values are committed as signed observations before use. Policy specifies rounding, staleness, and fallback behavior.
+
+### 15.6 Cryptographic agility
+
+The protocol defines suites and version transitions rather than hard-coding one primitive forever.
+
+[NIST-standardized post-quantum algorithms](https://www.nist.gov/news-events/news/2024/08/nist-releases-first-3-finalized-post-quantum-encryption-standards) are migration targets for long-lived signatures, protected key establishment, and archives. Early pilots should benchmark key size, signature size, latency, hardware support, library maturity, recovery, and operational error before making a suite consensus-critical.
+
+### 15.7 Release verification
+
+Every release publishes:
+
+- source commit;
+- reproducible build instructions;
+- artifact hashes;
+- dependency lock;
+- test vectors;
+- schema versions;
+- migration plan;
+- security review;
+- rollback plan.
+
+---
+
+## 16. Oracles
+
+### 16.1 What an oracle is
+
+An oracle is an institution that converts observations outside the protocol into authorized inputs.
+
+It is not merely an API.
+
+### 16.2 Observation record
+
+Each observation includes:
+
+- source;
+- item or market;
+- location;
+- timestamp;
+- method;
+- confidence or quality field;
+- signer;
+- conflict disclosure;
+- raw-data commitment;
+- expiration.
+
+### 16.3 Aggregation
+
+Possible controls include:
+
+- multiple genuinely independent sources;
+- robust median or trimmed aggregation;
+- venue-depth weighting;
+- time weighting;
+- staleness rejection;
+- outlier review;
+- anti-wash filters;
+- independent witnesses;
+- delayed activation for large changes;
+- rate-of-change limits;
+- fallback auctions;
+- manual emergency override with expiration and public reason.
+
+### 16.4 Availability
+
+A price feed is incomplete without availability.
+
+The basket oracle records stockouts, waiting times, service capacity, and geographic reach. A provider advertising a price while refusing 𝒰 transactions does not contribute usable capacity.
+
+### 16.5 Oracle failure
+
+If required observations become unreliable:
+
+- dependent conversions pause;
+- the last valid basket may continue for a bounded period;
+- direct provider contracts continue where possible;
+- emergency review begins;
+- no privileged actor may silently substitute a new source.
+
+---
+
+## 17. Privacy and data governance
+
+### 17.1 Data minimization
+
+Collect only data needed for a defined function. Set deletion or retention rules before collection.
+
+### 17.2 Separation
+
+Identity, eligibility, payments, ballots, health, safety, and research use separate stores and credentials. Cross-domain linkage requires explicit authority.
+
+### 17.3 Public commitments
+
+The public log may contain:
+
+- hashes;
+- aggregate liabilities;
+- policy identifiers;
+- credential-status commitments;
+- nullifier sets;
+- audit roots;
+- release artifacts.
+
+It does not contain raw private records.
+
+### 17.4 Institutional observability
+
+Powerful actors receive less privacy in their official capacity.
+
+Treasury operations, budget authority, settlement exposures, operator actions, conflicts, and emergency interventions are logged at the level needed for accountability.
+
+### 17.5 Models
+
+Models may assist fraud review, forecasting, routing, translation, summarization, and anomaly detection.
+
+A model output affecting rights or money requires:
+
+- declared purpose;
+- version and evaluation;
+- confidence and known limitations;
+- human review;
+- appeal;
+- monitoring for disparate error;
+- rollback.
+
+Models do not determine personhood or dignity.
+
+---
+
+## 18. Research and rollout
+
+### Phase 0: specification and simulation
+
+No real balances.
+
+Required work:
+
+- define double-entry schemas;
+- simulate credit and settlement;
+- model ℰ price and liquidity shocks;
+- model provider concentration and default;
+- test basket calculations;
+- threat-model identity and coercion;
+- publish falsification criteria.
+
+### Phase 1: shadow ledger
+
+Record real transactions beside ordinary settlement without changing legal payment.
+
+Success requires:
+
+- exact reconciliation;
+- independent reproduction;
+- usable correction;
+- clear privacy boundaries;
+- low operator burden.
+
+### Phase 2: closed business mutual credit
+
+Launch ℰ among a small, dense group of businesses with reciprocal trade. No 𝒰 and no public UBI claim.
+
+Success requires:
+
+- measurable additional trade or liquidity savings;
+- bounded defaults;
+- realistic recirculation;
+- no hidden concentration;
+- participant retention without coercion;
+- transparent resolution.
+
+### Phase 3: externally funded 𝒰 pilot
+
+Issue a partial 𝒰 entitlement backed entirely by external funds or donated provider capacity.
+
+Recipients spend 𝒰 directly. Providers receive predictable external settlement.
+
+Success requires:
+
+- real access at the published level;
+- no degrading provider prices or quality;
+- low exclusion and appeal error;
+- recipient dignity;
+- complete liability accounting.
+
+### Phase 4: mixed settlement
+
+Providers voluntarily accept a bounded ℰ share and use obligation netting.
+
+Success requires:
+
+- ℰ recirculation;
+- settlement within contract;
+- no transfer of hidden loss to providers;
+- stable coverage;
+- no decline in recipient access.
+
+### Phase 5: bounded conversion
+
+Open a small 𝒰-to-ℰ conversion window funded by reserves and executable liquidity.
+
+Success requires:
+
+- realized purchasing power close to the published estimate;
+- manageable price impact;
+- no runaway issuance;
+- no adverse selection that drains the floor;
+- transparent pause behavior.
+
+### Phase 6: node federation
+
+Connect independent clearing nodes under common standards and limited exposure.
+
+Success requires:
+
+- audited inter-node positions;
+- credible resolution;
+- no forced par;
+- operational diversity;
+- failure containment.
+
+### Phase 7: partial Freedom Floor
+
+Only after earlier phases may the Society describe a program as a partial Freedom Floor.
+
+Coverage must state exactly which regions, people, categories, amounts, and failure protections are included.
+
+### No automatic mainnet milestone
+
+A blockchain mainnet is not the destination. Reliable public service is.
+
+---
+
+## 19. Required metrics
+
+### Economic
+
+- ℰ transaction volume and unique counterparties;
+- recirculation and concentration;
+- average and tail settlement time;
+- default and recovery rate;
+- credit utilization;
+- netting ratio;
+- external-liquidity requirement per unit of trade;
+- provider retention;
+- ℰ executable price and market depth;
+- conversion slippage;
+- category coverage;
+- 𝒰 and ℛ liabilities;
+- reserve and capital ratios.
+
+### Human
+
+- successful access to each essential category;
+- exclusion and duplicate-enrollment errors;
+- appeal time and reversal rate;
+- reported humiliation or coercion;
+- privacy incidents;
+- recipient choice and substitution;
+- provider burden;
+- accessibility outcomes.
+
+### Governance
+
+- participation;
+- representativeness;
+- comprehension;
+- delegation concentration;
+- agenda concentration;
+- implementation follow-through;
+- minority reports;
+- review and sunset completion.
+
+### Technical
+
+- reconciliation errors;
+- consistency-proof failures;
+- witness diversity;
+- availability;
+- recovery success;
+- key-loss incidents;
+- data-access violations;
+- verifier reproducibility;
+- upgrade and rollback performance.
+
+Metrics are diagnostic. They do not become a universal social score.
+
+---
+
+## 20. Stop conditions
+
+A pilot pauses or contracts when:
+
+- essential access falls below the published threshold;
+- provider settlement exceeds the contractual limit;
+- reserve or category coverage breaches its floor;
+- ℰ conversion causes unacceptable price impact;
+- losses exceed the ratified risk budget;
+- identity errors deny a material number of legitimate participants;
+- privacy failures cannot be contained;
+- a verifier cannot reproduce a binding result;
+- governance cannot correct a known failure;
+- the program shifts costs onto people with less power;
+- reported benefits depend on hidden subsidy or unreported arrears.
+
+The system must be able to fail honestly before it is allowed to fail at scale.
+
+---
+
+## 21. Implementation boundaries
+
+### 21.1 Required properties
+
+Every implementation must preserve:
+
+- narrow, auditable scope;
+- no arbitrary smart-contract casino;
+- transparent budgets;
+- content-addressed public records;
+- separation of `𝒰`, `ℛ`, and `ℰ`;
+- budget ceilings for funded work;
+- challenge and audit paths;
+- cryptographic agility;
+- verifier-first releases;
+- explicit implementation limits.
+
+### 21.2 Excluded assumptions
+
+The architecture does not assume:
+
+- unlimited `𝒰` redemption into `ℰ`;
+- generic issuance of `ℰ` without a corresponding asset, obligation, or approved monetary basis;
+- one native DID for all civic life;
+- proof of personhood as a purely technical protocol module;
+- ranked-choice voting or liquid democracy as universal defaults;
+- a new blockchain as the first production architecture;
+- STAR, FLAME, or another general reputation score as a civil hierarchy;
+- one immediate cryptographic suite that can never be migrated;
+- a ledger as the source of truth for external prices or human identity;
+- a token balance as proof that a Freedom Floor exists.
+
+### 21.3 Role of the v0.1.0 prototype
+
+The repository also contains a runnable v0.1.0 research prototype. It can test deterministic transactions, budget objects, two balance classes, multi-node replication, and narrow state-machine behavior. It is not the implementation defined by this architecture. Its monetary model and trust assumptions do not satisfy the requirements for a real economic system.
+
+The implementation path begins with accounting and simulation, not with a consensus upgrade.
+
+---
+
+## 22. Open research questions
+
+1. Can a business mutual-credit network reach sufficient trade-loop density without excessive brokerage?
+2. Which credit-limit process minimizes default without reproducing conventional exclusion?
+3. How much liquidity can obligation netting save under realistic participation?
+4. Which network obligations create durable ℰ demand without coercive lock-in?
+5. Can node-issued ℰ remain meaningfully fungible while exposing issuer risk?
+6. How should public credit be bounded when the Society lacks taxation authority?
+7. Which part of a Freedom Floor can be delivered through contracted capacity rather than external cash?
+8. How large must an unrestricted Autonomy Dividend be to preserve meaningful choice?
+9. Which basket process best combines rights, observed prices, availability, and public judgment?
+10. How quickly should basket values react to shocks without importing manipulation?
+11. What conversion corridor survives realistic ℰ volatility and market depth?
+12. Can a monetary expansion dividend be estimated without becoming procyclical or inflationary?
+13. Which proof-of-personhood combination minimizes both Sybil fraud and exclusion?
+14. Can ballot privacy, accessibility, coercion resistance, and public verification be achieved for the actual voting environment?
+15. Which records need shared consensus, and which need only independent witnessability?
+16. How should ecological costs enter procurement and credit limits without becoming a decorative score?
+17. Which institutions can hold reserves and settle across jurisdictions lawfully?
+18. What resolution process protects recipients, providers, and taxpayers when a node fails?
+19. How can independent research be funded without making the evaluator dependent on favorable findings?
+20. Under what conditions should Essentia be abandoned in favor of an existing payment, identity, or governance system?
+
+The last question is not rhetorical.
+
+Essentia earns the right to exist only where it performs a necessary function better than simpler alternatives.
+
+---
+
+## 23. Conclusion
+
+Essentia can coordinate trust. It cannot command trust into existence.
+
+It can make issuance rules visible, reconcile obligations, prove that a record was not rewritten, route a real entitlement, and show whether a treasury has acknowledged what it owes. It can help a network use idle capacity and reciprocal credit that ordinary money leaves stranded. It can make it harder for an institution to hide a failure.
+
+It cannot manufacture food, housing, medicine, skill, goodwill, legal authority, or external currency by changing a number.
+
+A widely adopted ℰ can acquire real purchasing power because people can use it to discharge real obligations and obtain real goods. That possibility is serious enough to test. It is not serious enough to promise before the trade loops, providers, reserves, credit rules, and governance exist.
+
+𝒰 is therefore the promise.
+
+ℰ is one way to settle the promise.
+
+The bridge connects the promise to the rest of the world.
+
+The public log makes the promise inspectable.
+
+The research program decides whether any of it deserves to scale.
+
+That is the architecture this version proposes.
+
+Not a machine that declares value.
+
+A society that builds the relationships through which value becomes real.
+
+---
+
+## Research basis
+
+The scientific and economic reasoning behind this specification is developed in [Part B of the Society of Renewal Founding Book](https://github.com/SocietyOfRenewal/societyofrenewal/blob/main/docs/founding-book/Part%20B.md). Part B includes the working bibliography, competing evidence, explicit uncertainties, and stage-gate research design.
